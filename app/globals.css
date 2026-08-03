@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ----------------------------------------------------------------
+   Design Tokens — University-grade professional colour palette
+   Primary: Deep navy blue (institution trust)
+   Accent:  Warm gold (academic excellence)
+   ---------------------------------------------------------------- */
+@layer base {
+  :root {
+    /* Backgrounds */
+    --background: 210 20% 98%;
+    --foreground: 220 25% 12%;
+
+    /* Cards & Popovers */
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 12%;
+
+    /* Primary — Deep Navy */
+    --primary: 222 60% 22%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary — Muted slate */
+    --secondary: 210 18% 93%;
+    --secondary-foreground: 222 30% 22%;
+
+    /* Muted */
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent — Warm Gold */
+    --accent: 43 90% 50%;
+    --accent-foreground: 222 60% 12%;
+
+    /* Status */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Borders & Inputs */
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 222 60% 22%;
+
+    /* Radius */
+    --radius: 0.625rem;
+
+    /* Sidebar */
+    --sidebar-background: 222 60% 18%;
+    --sidebar-foreground: 210 35% 88%;
+    --sidebar-primary: 43 90% 50%;
+    --sidebar-primary-foreground: 222 60% 12%;
+    --sidebar-accent: 222 50% 26%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 222 45% 25%;
+    --sidebar-ring: 43 90% 50%;
+  }
+
+  .dark {
+    --background: 222 35% 8%;
+    --foreground: 210 35% 93%;
+
+    --card: 222 30% 11%;
+    --card-foreground: 210 35% 93%;
+    --popover: 222 30% 11%;
+    --popover-foreground: 210 35% 93%;
+
+    --primary: 43 90% 52%;
+    --primary-foreground: 222 60% 10%;
+
+    --secondary: 222 25% 18%;
+    --secondary-foreground: 210 35% 88%;
+
+    --muted: 222 25% 16%;
+    --muted-foreground: 215 16% 57%;
+
+    --accent: 222 45% 28%;
+    --accent-foreground: 210 35% 93%;
+
+    --destructive: 0 63% 55%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 222 25% 22%;
+    --input: 222 25% 22%;
+    --ring: 43 90% 52%;
+
+    --sidebar-background: 222 40% 7%;
+    --sidebar-foreground: 210 30% 82%;
+    --sidebar-primary: 43 90% 52%;
+    --sidebar-primary-foreground: 222 60% 10%;
+    --sidebar-accent: 222 35% 14%;
+    --sidebar-accent-foreground: 210 35% 90%;
+    --sidebar-border: 222 30% 14%;
+    --sidebar-ring: 43 90% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus ring — keyboard accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Page entrance animation */
+  .animate-page-in {
+    animation: fade-in 0.3s ease-out both;
+  }
+
+  /* Sidebar gradient overlay */
+  .sidebar-gradient {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--sidebar-background)) 0%,
+      hsl(222 55% 14%) 100%
+    );
+  }
+
+  /* Glass card */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .glass-card {
+    background: rgba(30, 35, 55, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
