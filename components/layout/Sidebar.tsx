@@ -29,13 +29,14 @@ const studentNavItems = [
 ];
 
 const adminNavItems = [
-  { href: "/admin",              label: "Dashboard",     icon: LayoutDashboard },
-  { href: "/admin/students",     label: "Students",      icon: Users },
-  { href: "/admin/departments",  label: "Departments",   icon: Building2 },
-  { href: "/admin/exams",        label: "Exams",         icon: FileText },
-  { href: "/admin/announcements",label: "Announcements", icon: Bell },
-  { href: "/admin/graduation-ai",label: "Graduation AI", icon: GraduationCap },
-  { href: "/admin/settings",     label: "Settings",      icon: Settings },
+  { href: "/admin",               label: "Dashboard",     icon: LayoutDashboard },
+  { href: "/admin/students",      label: "Students",      icon: Users },
+  { href: "/admin/academic-structure", label: "Academic Structure", icon: Building2 },
+  { href: "/admin/courses",       label: "Courses",       icon: BookOpen }, // <--- أضفنا زر الكورسات هنا
+  { href: "/admin/exams",         label: "Documents",         icon: FileText },
+  { href: "/admin/announcements", label: "Announcements", icon: Bell },
+  { href: "/admin/graduation-ai", label: "Graduation AI", icon: GraduationCap },
+  { href: "/admin/settings",      label: "Settings",      icon: Settings },
 ];
 
 export function Sidebar() {
