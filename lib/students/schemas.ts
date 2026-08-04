@@ -15,7 +15,7 @@ export const studentSchema = z.object({
   specialization_id: z.string().uuid().nullable(),
   year_of_study: z.number().int().min(1, "Year is required"),
   academic_year: z.string().trim().min(1, "Academic year is required"),
-  role: z.enum(["STUDENT", "ADMIN"]).default("STUDENT"),
+  role: z.enum(["STUDENT", "ADMIN"]),
 });
 
 export type StudentFormData = z.infer<typeof studentSchema>;

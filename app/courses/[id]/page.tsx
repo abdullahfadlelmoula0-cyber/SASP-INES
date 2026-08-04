@@ -19,7 +19,7 @@ export default async function StudentCourseDetailsPage({ params }: CoursePagePro
     .eq("id", id)
     .single();
 
-  if (error || !course || !course.is_active) {
+  if (error || !course) {
     notFound();
   }
 
@@ -61,8 +61,8 @@ export default async function StudentCourseDetailsPage({ params }: CoursePagePro
           <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
             <Calendar className="w-5 h-5 text-primary" />
             <div>
-              <p className="text-xs text-muted-foreground">Academic Year</p>
-              <p className="font-semibold">{course.academic_year}</p>
+              <p className="text-xs text-muted-foreground">Year of Study</p>
+              <p className="font-semibold">Year {course.year_of_study ?? course.year_number ?? "—"}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">

@@ -53,7 +53,6 @@ export default async function ProfilePage() {
     const { count, error } = await supabase
       .from("courses")
       .select("*", { count: "exact", head: true })
-      .eq("is_active", true)
       .eq("department", studentDept)
       .eq("year_of_study", Number(studentYear));
 

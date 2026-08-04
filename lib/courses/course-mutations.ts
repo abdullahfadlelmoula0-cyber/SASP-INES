@@ -49,21 +49,6 @@ export async function updateCourse(
   return { data: data as Course | null, error };
 }
 
-export async function setCourseActive(
-  id: string,
-  isActive: boolean
-): Promise<{ data: Course | null; error: Error | null }> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("courses")
-    .update({ is_active: isActive })
-    .eq("id", id)
-    .select("*")
-    .single();
-
-  return { data: data as Course | null, error };
-}
-
 export async function deleteCourse(
   id: string
 ): Promise<{ error: Error | null }> {
@@ -91,29 +76,12 @@ export async function fetchMyCourses(): Promise<{
 }> {
   const supabase = createClient();
 
-  // 1. جلب المستخدم الحالي
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { data: [], error: new Error("User not authenticated") };
-  }
-
-  // 2. جلب بيانات البروفايل للطالب (القسم والسنة الدراسية)
-  const { data: profile } = await (supabase as any)
-    .from("profiles")
-    .select("department, year_of_study")
-    .eq("id", user.id)
-    .single();
-
-  const studentDepartment = profile?.department || "Computer Science";
-  const studentYear = profile?.year_of_study || 1;
-
-  // 3. جلب الكورسات النشطة التي تطابق قسم الطالب وسنته الدراسية بدقة
-  const { data, error } = await (supabase as any)
+  // RLS automatically filters courses to match the current student's
+  // academic profile (department + program + year_of_study).
+  // No is_active filter needed — all matching courses are visible.
+  const { data, error } = await supabase
     .from("courses")
     .select("*")
-    .eq("is_active", true)
-    .eq("department", studentDepartment)
-    .eq("year_of_study", studentYear)
     .order("code", { ascending: true });
 
   return { data: (data as Course[]) ?? [], error };

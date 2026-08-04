@@ -7,8 +7,8 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Plus, Trash2, Power, GitBranch } from "lucide-react";
-import { CourseDetailsModal } from "@/components/courses/CourseDetailsModal";
+import { BookOpen, Plus, Trash2, GitBranch } from "lucide-react";
+import { CourseDetails } from "@/components/courses/CourseDetails";
 
 export default function DepartmentCoursesPage() {
   const params = useParams();
@@ -16,12 +16,12 @@ export default function DepartmentCoursesPage() {
   const [departmentData, setDepartmentData] = useState<any>(null);
   const [courses, setCourses] = useState<any[]>([]);
   const [existingTracks, setExistingTracks] = useState<string[]>([]);
-  
+
   const [title, setTitle] = useState("");
   const [code, setCode] = useState("");
   const [credits, setCredits] = useState("");
   const [yearOfStudy, setYearOfStudy] = useState("1");
-  
+
   const [selectedOption, setSelectedOption] = useState("");
   const [customOptionInput, setCustomOptionInput] = useState("");
 
@@ -37,20 +37,22 @@ export default function DepartmentCoursesPage() {
   }, [deptId]);
 
   async function fetchDeptAndCourses() {
-    const { data: dept } = await (supabase.from("departments") as any).select("*").eq("id", deptId).single();
+    const { data: dept } = await (supabase.from("departments") as any)
+      .select("*")
+      .eq("id", deptId)
+      .single();
     if (dept) setDepartmentData(dept);
 
-    const { data: courseList } = await (supabase.from("courses") as any).select("*").eq("department_id", deptId);
+    const { data: courseList } = await (supabase.from("courses") as any)
+      .select("*")
+      .eq("department_id", deptId);
     if (courseList) {
       setCourses(courseList);
-      
-      // استخراج التخصصات الفريدة بدون تكرار وتحويلها إلى Capital Letters بالكامل
-// استخراج التخصصات وتصفيتها لمنع أي تكرار أو تشابه إملائي
+
       const tracksMap = new Map<string, string>();
       courseList.forEach((c: any) => {
         if (c.option_track && c.option_track.trim() !== "") {
           let track = c.option_track.trim().toUpperCase();
-          // تصحيح الأخطاء الإملائية الشائعة مباشرة لتتطابق تلقائياً
           if (track === "NETWROK" || track === "NETOWRK") {
             track = "NETWORK";
           }
@@ -69,7 +71,8 @@ export default function DepartmentCoursesPage() {
     }
   }
 
-  const isFinalYear = departmentData && parseInt(yearOfStudy) === departmentData.year_number;
+  const isFinalYear =
+    departmentData && parseInt(yearOfStudy) === departmentData.year_number;
 
   async function handleAddCourse(e: React.FormEvent) {
     e.preventDefault();
@@ -77,19 +80,20 @@ export default function DepartmentCoursesPage() {
 
     let finalOptionTrack = selectedOption;
     if (isFinalYear && selectedOption === "other" && customOptionInput.trim()) {
-      finalOptionTrack = customOptionInput.trim().toUpperCase(); // حفظ النص الجديد بأحرف كبيرة أيضاً
+      finalOptionTrack = customOptionInput.trim().toUpperCase();
     }
 
-    const { error } = await (supabase.from("courses") as any).insert([{
-      title: title,
-      code: code,
-      credits: parseInt(credits) || 3,
-      year_of_study: parseInt(yearOfStudy) || 1,
-      option_track: isFinalYear ? finalOptionTrack : null,
-      is_active: true,
-      department_id: deptId,
-      department: departmentData?.name || ""
-    }]);
+    const { error } = await (supabase.from("courses") as any).insert([
+      {
+        title: title,
+        code: code,
+        credits: parseInt(credits) || 3,
+        year_of_study: parseInt(yearOfStudy) || 1,
+        option_track: isFinalYear ? finalOptionTrack : null,
+        department_id: deptId,
+        department: departmentData?.name || "",
+      },
+    ]);
 
     if (error) {
       console.error("Error inserting course:", error.message);
@@ -105,15 +109,6 @@ export default function DepartmentCoursesPage() {
     fetchDeptAndCourses();
   }
 
-  async function handleToggleActive(courseId: string, currentStatus: boolean, e: React.MouseEvent) {
-    e.stopPropagation();
-    const { error } = await (supabase.from("courses") as any)
-      .update({ is_active: !currentStatus })
-      .eq("id", courseId);
-
-    if (!error) fetchDeptAndCourses();
-  }
-
   async function handleDeleteCourse(courseId: string, e: React.MouseEvent) {
     e.stopPropagation();
     await (supabase.from("courses") as any).delete().eq("id", courseId);
@@ -123,7 +118,11 @@ export default function DepartmentCoursesPage() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto p-6">
       <PageHeader
-        title={departmentData ? `Department: ${departmentData.name}` : "Department Courses"}
+        title={
+          departmentData
+            ? `Department: ${departmentData.name}`
+            : "Department Courses"
+        }
         description={`Manage courses. Total years for this program: ${departmentData?.year_number || 4}.`}
       />
 
@@ -163,10 +162,11 @@ export default function DepartmentCoursesPage() {
             {isFinalYear && (
               <div className="p-4 bg-muted/40 rounded-lg border border-border/60 space-y-3 animate-in fade-in-50">
                 <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                  <GitBranch className="w-3.5 h-3.5 text-primary" /> Specialization / Track (Final Year Required):
+                  <GitBranch className="w-3.5 h-3.5 text-primary" />{" "}
+                  Specialization / Track (Final Year Required):
                 </label>
-                
-                <select 
+
+                <select
                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={selectedOption}
                   onChange={(e) => setSelectedOption(e.target.value)}
@@ -174,7 +174,9 @@ export default function DepartmentCoursesPage() {
                 >
                   <option value="">-- Select Existing Option / Track --</option>
                   {existingTracks.map((track, idx) => (
-                    <option key={idx} value={track}>{track}</option>
+                    <option key={idx} value={track}>
+                      {track}
+                    </option>
                   ))}
                   <option value="other">+ Add New Specialization...</option>
                 </select>
@@ -203,8 +205,8 @@ export default function DepartmentCoursesPage() {
         <h2 className="text-xl font-bold">Assigned Courses</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {courses.map((course) => (
-            <Card 
-              key={course.id} 
+            <Card
+              key={course.id}
               onClick={() => {
                 setSelectedCourse(course);
                 setIsModalOpen(true);
@@ -212,7 +214,7 @@ export default function DepartmentCoursesPage() {
               className="border-border/60 shadow-sm flex items-center justify-between p-4 cursor-pointer hover:border-primary/50 transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${course.is_active !== false ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
                   <BookOpen className="w-4 h-4" />
                 </div>
                 <div>
@@ -223,44 +225,35 @@ export default function DepartmentCoursesPage() {
                         {course.option_track}
                       </span>
                     )}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${course.is_active !== false ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
-                      {course.is_active !== false ? 'Active' : 'Inactive'}
-                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {course.code || "No Code"} • Year {course.year_of_study || 1} • {course.credits || 3} Credits
+                    {course.code || "No Code"} · Year {course.year_of_study || 1}{" "}
+                    · {course.credits || 3} Credits
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  onClick={(e) => handleToggleActive(course.id, course.is_active !== false, e)}
-                >
-                  <Power className={`w-4 h-4 ${course.is_active !== false ? 'text-emerald-600' : 'text-muted-foreground'}`} />
-                </Button>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  onClick={(e) => handleDeleteCourse(course.id, e)}
-                >
-                  <Trash2 className="w-4 h-4 text-rose-500" />
-                </Button>
-              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => handleDeleteCourse(course.id, e)}
+              >
+                <Trash2 className="w-4 h-4 text-rose-500" />
+              </Button>
             </Card>
           ))}
           {courses.length === 0 && (
-            <p className="text-sm text-muted-foreground col-span-full">No courses added to this department yet.</p>
+            <p className="text-sm text-muted-foreground col-span-full">
+              No courses added to this department yet.
+            </p>
           )}
         </div>
       </div>
 
-      <CourseDetailsModal 
+      <CourseDetails
         course={selectedCourse}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onUpdate={() => fetchDeptAndCourses()}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        variant="admin"
       />
     </div>
   );

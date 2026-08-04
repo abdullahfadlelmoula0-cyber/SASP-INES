@@ -43,10 +43,6 @@ export default async function AdminCourseDetailsPage({ params }: AdminCoursePage
                 {course.code || "N/A"}
               </span>
               <h1 className="text-2xl font-bold">{course.title}</h1>
-              {/* شارة حالة التفعيل */}
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${course.is_active !== false ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
-                {course.is_active !== false ? 'Active' : 'Inactive'}
-              </span>
             </div>
             <p className="text-muted-foreground">{course.description || "No description provided."}</p>
           </div>

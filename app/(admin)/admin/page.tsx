@@ -48,8 +48,6 @@ export default async function AdminDashboardPage() {
   const [
     { count: studentsCount },
     { count: totalCoursesCount },
-    { count: activeCoursesCount },
-    { count: inactiveCoursesCount },
     { data: recentCourses },
   ] = await Promise.all([
     supabase
@@ -59,14 +57,6 @@ export default async function AdminDashboardPage() {
     supabase
       .from("courses")
       .select("*", { count: "exact", head: true }),
-    supabase
-      .from("courses")
-      .select("*", { count: "exact", head: true })
-      .eq("is_active", true),
-    supabase
-      .from("courses")
-      .select("*", { count: "exact", head: true })
-      .eq("is_active", false),
     supabase
       .from("courses")
       .select("*")
@@ -97,31 +87,6 @@ export default async function AdminDashboardPage() {
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-50 dark:bg-emerald-950/40",
       border: "border-emerald-100 dark:border-emerald-900/60",
-      href: "/admin/courses",
-      badge: null,
-    },
-    {
-      id: "active-courses",
-      label: "Active Courses",
-      value: activeCoursesCount ?? 0,
-      icon: CheckCircle2,
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50 dark:bg-amber-950/40",
-      border: "border-amber-100 dark:border-amber-900/60",
-      href: "/admin/courses",
-      badge:
-        (totalCoursesCount ?? 0) > 0
-          ? `${Math.round(((activeCoursesCount ?? 0) / (totalCoursesCount ?? 1)) * 100)}% active`
-          : null,
-    },
-    {
-      id: "inactive-courses",
-      label: "Inactive Courses",
-      value: inactiveCoursesCount ?? 0,
-      icon: Clock,
-      color: "text-slate-500 dark:text-slate-400",
-      bg: "bg-slate-50 dark:bg-slate-900/40",
-      border: "border-slate-100 dark:border-slate-800/60",
       href: "/admin/courses",
       badge: null,
     },
@@ -371,18 +336,12 @@ export default async function AdminDashboardPage() {
                           </td>
                           <td className="px-4 py-3 hidden lg:table-cell">
                             <Badge variant="secondary" className="font-normal text-[10px]">
-                              {course.academic_year}
+                              Y{course.year_of_study ?? course.year_number ?? "—"}
                             </Badge>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
-                              <Badge
-                                variant={course.is_active ? "success" : "muted"}
-                                className="text-[10px] font-medium w-fit"
-                              >
-                                {course.is_active ? "Active" : "Inactive"}
-                              </Badge>
-                              {course.is_active && delivery !== "unknown" && (
+                              {delivery !== "unknown" ? (
                                 <Badge
                                   variant={
                                     delivery === "in_progress"
@@ -398,6 +357,10 @@ export default async function AdminDashboardPage() {
                                     : delivery === "scheduled"
                                     ? "Scheduled"
                                     : "Completed"}
+                                </Badge>
+                              ) : (
+                                <Badge variant="muted" className="text-[10px] w-fit">
+                                  Schedule TBD
                                 </Badge>
                               )}
                             </div>
@@ -443,17 +406,14 @@ export default async function AdminDashboardPage() {
                         {course.title}
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Course added •{" "}
-                        {course.created_at
-                          ? formatDate(course.created_at)
-                          : "—"}
+                        {course.code} · Year {course.year_of_study ?? course.year_number ?? "—"} · {course.program}
                       </p>
                     </div>
                     <Badge
-                      variant={course.is_active ? "success" : "muted"}
+                      variant="secondary"
                       className="text-[10px] shrink-0 mt-0.5"
                     >
-                      {course.is_active ? "Live" : "Draft"}
+                      {course.department}
                     </Badge>
                   </div>
                 ))}

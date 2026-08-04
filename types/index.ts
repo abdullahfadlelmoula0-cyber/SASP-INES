@@ -28,28 +28,36 @@ export interface UserProfile {
   full_name: string;
   /** University email address, e.g. ug2528267@ines.ac.rw */
   university_email: string | null;
-  /** Academic department, e.g. "Computer Science" */
+  /** Academic department, e.g. "Computer Science" (display-only) */
   department: string;
-  /** Degree programme, e.g. "Software Engineering" */
+  /** Degree programme, e.g. "Software Engineering" (display-only) */
   program: string;
   /**
    * Current year within the student's programme (e.g., 3).
    * The valid maximum is programme-specific — not a universal constant.
-   * Software Engineering = 4 years max; other programmes may differ.
    */
   year_of_study: number;
   /**
    * Current academic year label, e.g. "2026/2027". Admin-set.
    * Never auto-derived from the system date.
    */
-  academic_year: string;
+  academic_year: string | null;
   /** Role controls access to admin features */
   role: UserRole;
   /** URL of profile avatar stored in Supabase Storage */
   avatar_url: string | null;
+  /**
+   * FK → academic_plans.id. The REAL source of truth for course matching
+   * (structured path). Null for students on the legacy dept/program path.
+   */
+  academic_plan_id: string | null;
+  /**
+   * FK → specializations.id. Required once year_of_study > shared_years.
+   * Null for shared-trunk years or legacy-path students.
+   */
+  specialization_id: string | null;
   created_at: string;
   updated_at: string;
-  
 }
 
 // ── Academic Targeting ────────────────────────────────────────────
@@ -85,7 +93,7 @@ export interface AcademicTarget {
    * Human-readable academic year label, e.g. "2026/2027".
    * Set explicitly by the admin — never auto-derived from the date.
    */
-  academic_year: string;
+  academic_year?: string | null;
 }
 
 // ── Courses ──────────────────────────────────────────────────────
@@ -97,7 +105,10 @@ export interface AcademicTarget {
  * + year_of_study + academic_year). Students automatically see the
  * courses that match their profile — no manual filter needed.
  *
- * Visibility is controlled by `is_active`. The admin sets this flag
+ * Visibility is determined purely by the academic context:
+ * - Legacy courses: department + program + year_of_study match
+ * - Structured courses: academic_plan_id + specialization_id + year_number match
+ * The `is_active` column was removed in migration 012.
  * to true when the course is currently running. Multiple courses can
  * run simultaneously (overlapping start_date / end_date is allowed).
  *
@@ -128,15 +139,18 @@ year_number: number | null;
    */
   end_date: string | null;
   /**
-   * When true, the course appears in the student-facing courses list.
-   * The admin sets this to false when a course is no longer running.
-   * This is the primary "current courses" signal — not a date derivation.
+   * Informational label set by the admin (e.g. "2026/2027").
+   * Displayed in the admin UI. NOT used for student visibility filtering —
+   * that is controlled solely by department/program/year_of_study (legacy)
+   * or academic_plan_id/specialization_id/year_number (structured).
    */
-  is_active: boolean;
-  /** UUID of the admin who created this course. Nullable (ON DELETE SET NULL). */
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
+  /**
+   * Informational academic-year label (e.g. "2026/2027").
+   * Null if not set — this field was removed from the courses table
+   * in an earlier migration and is kept as optional for compatibility.
+   * NOT used for RLS matching or student visibility.
+   */
+  academic_year?: string | null;
 }
 
 /**

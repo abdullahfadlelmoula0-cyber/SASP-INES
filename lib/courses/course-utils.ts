@@ -86,10 +86,9 @@ export interface CreateCourseInput {
   department: string;
   program: string;
   year_of_study: number;
-  academic_year: string;
+  academic_year?: string;
   start_date: string | null;
   end_date: string | null;
-  is_active: boolean;
 }
 
 export type UpdateCourseInput = Partial<CreateCourseInput>;
@@ -103,10 +102,8 @@ export interface CourseValidationErrors {
   department?: string;
   program?: string;
   year_of_study?: string;
-  academic_year?: string;
   start_date?: string;
   end_date?: string;
-  is_active?: string;
   _global?: string;
 }
 
@@ -157,9 +154,7 @@ export function validateCourseInput(
     errors.year_of_study = "Year of study must be at least 1";
   }
 
-  if (!input.academic_year?.trim()) {
-    errors.academic_year = "Academic year is required";
-  }
+  // academic_year is optional — informational only, not required for course creation
 
   if (input.start_date && input.end_date) {
     const s = new Date(input.start_date);

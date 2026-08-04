@@ -39,7 +39,7 @@ const adminNavItems = [
   { href: "/admin/settings",      label: "Settings",      icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ courseCount }: { courseCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, isLoading } = useUser();
@@ -51,7 +51,17 @@ export function Sidebar() {
     router.refresh();
   }
 
-  function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {
+  function NavItem({
+    href,
+    label,
+    icon: Icon,
+    badge,
+  }: {
+    href: string;
+    label: string;
+    icon: React.ElementType;
+    badge?: number;
+  }) {
     const isActive = pathname === href || pathname.startsWith(href + "/");
     return (
       <Link
@@ -69,8 +79,13 @@ export function Sidebar() {
             isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50"
           )}
         />
-        {label}
-        {isActive && (
+        <span className="flex-1">{label}</span>
+        {badge !== undefined && (
+          <span className="ml-auto text-[10px] font-semibold bg-sidebar-accent/60 text-sidebar-foreground/80 px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+            {badge}
+          </span>
+        )}
+        {isActive && badge === undefined && (
           <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
         )}
       </Link>
@@ -105,7 +120,11 @@ export function Sidebar() {
               </p>
             </div>
             {adminNavItems.map((item) => (
-              <NavItem key={item.href} {...item} />
+              <NavItem
+                key={item.href}
+                {...item}
+                badge={item.href === "/admin/courses" && courseCount !== undefined ? courseCount : undefined}
+              />
             ))}
           </div>
         ) : (

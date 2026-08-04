@@ -24,52 +24,22 @@ export function StudentCoursesClient() {
   const [search, setSearch] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
-  const studentYear = profile?.year_of_study;
-  const studentDept = profile?.department || profile?.program;
-
-  // دالة جلب المقررات مع التصفية السليمة بناءً على الأعمدة المؤكدة في الجدول
+  // Load courses — RLS handles all visibility filtering automatically.
+  // No is_active filter needed: students see all courses whose department +
+  // program + year_of_study match their profile (or academic_plan_id path).
   async function loadCourses() {
     setLoading(true);
     setError(null);
     try {
       const supabase = createClient();
-      
-      let query = supabase
+
+      const { data, error: supabaseError } = await supabase
         .from("courses")
         .select("*")
-        .eq("is_active", true);
-
-      // 1. تصفية حسب السنة الدراسية (year_of_study)
-      if (studentYear) {
-        query = query.eq("year_of_study", studentYear);
-      }
-
-      const { data, error: supabaseError } = await query.order("code", { ascending: true });
+        .order("code", { ascending: true });
 
       if (supabaseError) throw supabaseError;
-
-      const allCourses = (data as Course[]) ?? [];
-
-      // 2. تصفية دقيقة وآمنة عبر الكود (Client-side) للتأكد من مطابقة القسم أو البرنامج لتجنب تداخل الأقسام
-      if (studentDept && studentDept.toLowerCase() !== "student") {
-        const filteredByDept = allCourses.filter((c) => {
-          const courseDept = (c.department || "").toLowerCase();
-          const courseProg = (c.program || "").toLowerCase();
-          const userTarget = studentDept.toLowerCase();
-
-          return (
-            courseDept.includes(userTarget) ||
-            courseProg.includes(userTarget) ||
-            courseDept === "" ||
-            !courseDept
-          );
-        });
-
-        setCourses(filteredByDept.length > 0 ? filteredByDept : allCourses);
-      } else {
-        setCourses(allCourses);
-      }
-
+      setCourses((data as Course[]) ?? []);
     } catch (e) {
       const err = e instanceof Error ? e : new Error("Failed to load courses");
       setError(err);
@@ -82,7 +52,7 @@ export function StudentCoursesClient() {
     if (!profileLoading) {
       void loadCourses();
     }
-  }, [reloadKey, studentYear, studentDept, profileLoading]);
+  }, [reloadKey, profileLoading]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return courses;
@@ -95,12 +65,6 @@ export function StudentCoursesClient() {
         (c.instructor?.toLowerCase() ?? "").includes(q)
     );
   }, [courses, search]);
-
-  const counts = useMemo(() => {
-    const total = courses.length;
-    const active = courses.filter((c) => c.is_active).length;
-    return { total, active };
-  }, [courses]);
 
   return (
     <div className="space-y-6">
@@ -115,25 +79,18 @@ export function StudentCoursesClient() {
             </span>
             <span className="mx-1.5 text-muted-foreground/60">·</span>
             <span>Year {profile.year_of_study || 1}</span>
-            <span className="mx-1.5 text-muted-foreground/60">·</span>
-            <span>Academic Year {profile.academic_year || "—"}</span>
           </p>
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard
           label="Total Courses"
-          value={counts.total.toString()}
+          value={courses.length.toString()}
           accent="primary"
         />
         <StatCard
-          label="Active"
-          value={counts.active.toString()}
-          accent="success"
-        />
-        <StatCard
-          label="Searching"
+          label="Showing"
           value={filtered.length.toString()}
           accent="info"
         />
@@ -191,7 +148,7 @@ export function StudentCoursesClient() {
         <EmptyState
           icon={BookOpen}
           title="No courses available yet"
-          description="There are currently no active courses found in the database matching your profile."
+          description="There are no courses assigned to your academic profile yet. Contact your administrator."
           action={
             <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
               <RefreshCw className="w-4 h-4" />
@@ -234,13 +191,11 @@ function StatCard({
 }: {
   label: string;
   value: string;
-  accent: "primary" | "success" | "info";
+  accent: "primary" | "info";
 }) {
   const accents = {
     primary:
       "text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/40 dark:border-blue-900/40",
-    success:
-      "text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/40 dark:border-emerald-900/40",
     info:
       "text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/40 dark:border-amber-900/40",
   } as const;

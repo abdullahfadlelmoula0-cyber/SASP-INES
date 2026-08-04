@@ -68,7 +68,6 @@ export function AddPlanCourseModal({
       instructor: "",
       start_date: "",
       end_date: "",
-      is_active: false,
     },
   });
 
@@ -85,7 +84,6 @@ export function AddPlanCourseModal({
         instructor: "",
         start_date: "",
         end_date: "",
-        is_active: false,
       });
     }
   }, [open, context, form]);
@@ -172,7 +170,6 @@ export function EditPlanCourseModal({
       instructor: "",
       start_date: "",
       end_date: "",
-      is_active: false,
     },
   });
 
@@ -189,7 +186,6 @@ export function EditPlanCourseModal({
         instructor: course.instructor ?? "",
         start_date: course.start_date ?? "",
         end_date: course.end_date ?? "",
-        is_active: course.is_active,
       });
     }
   }, [open, course, form]);
@@ -245,13 +241,11 @@ export function EditPlanCourseModal({
 
 function PlanCourseFormFields({
   form,
-  mode,
 }: {
   form: UseFormReturn<PlanCourseFormData>;
   mode: "create" | "edit";
 }) {
-  const { register, watch, formState: { errors } } = form;
-  const is_active = watch("is_active");
+  const { register, formState: { errors } } = form;
 
   return (
     <div className="space-y-6">
@@ -277,7 +271,6 @@ function PlanCourseFormFields({
 
       <div className="border-t border-border -mx-5 sm:-mx-6" />
 
-      {/* تم إزالة قسم Academic Year والابتعاد عن استيراد ACADEMIC_YEARS لعدم الحاجة إليهما */}
       <section className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Start Date" error={errors.start_date?.message}>
@@ -287,36 +280,6 @@ function PlanCourseFormFields({
             <Input type="date" {...register("end_date")} />
           </Field>
         </div>
-      </section>
-
-      <div className="border-t border-border -mx-5 sm:-mx-6" />
-
-      <section className="space-y-3">
-        <div
-          className={cn(
-            "rounded-xl border p-4 sm:p-5 transition-colors",
-            is_active ? "border-emerald-500/25 bg-emerald-500/5" : "border-amber-500/25 bg-amber-500/5"
-          )}
-        >
-          <label className="flex items-center justify-between gap-4 cursor-pointer">
-            <div className="flex items-start gap-3">
-              <input type="checkbox" {...register("is_active")} className="w-5 h-5 mt-0.5 accent-emerald-500" />
-              <div>
-                <p className="font-semibold text-sm">{is_active ? "Course is Active" : "Course is Draft / Inactive"}</p>
-                <p className="text-xs text-muted-foreground">
-                  Students can only see active courses matching their year/track.
-                </p>
-              </div>
-            </div>
-            <Badge variant={is_active ? "success" : "warning"}>{is_active ? "Active" : "Draft"}</Badge>
-          </label>
-        </div>
-        {!is_active && mode === "create" && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm mt-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-amber-800">New courses default to Draft. Students won&apos;t see it until you activate it.</p>
-          </div>
-        )}
       </section>
     </div>
   );

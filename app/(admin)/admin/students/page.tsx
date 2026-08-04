@@ -47,12 +47,8 @@ export interface Student {
   specialization_id?: string | null;
 }
 
-interface AdminStudentsPageProps {
-  initialStudents?: Student[];
-}
-
-export default function AdminStudentsPage({ initialStudents = [] }: AdminStudentsPageProps) {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+export default function AdminStudentsPage() {
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);

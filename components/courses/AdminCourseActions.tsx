@@ -16,13 +16,11 @@ import {
   AlertTriangle,
   ArchiveRestore,
   Loader2,
-  Play,
-  Pause,
   Trash2,
   Eye,
   EyeOff,
 } from "lucide-react";
-import { toggleCourseActive, deleteCourse } from "@/lib/courses/actions";
+import { deleteCourse } from "@/lib/courses/actions";
 import { toast } from "@/hooks/use-toast";
 import type { Course } from "@/types";
 
@@ -47,58 +45,11 @@ export function AdminCourseActions({
   );
 }
 
-export async function activateCourse(
-  course: Course,
-  opts: { onSuccess: () => void }
-) {
-  try {
-    const { error } = await toggleCourseActive(course.id, course.is_active);
-    if (error) throw new Error(error);
-    toast({
-      title: "Course activated",
-      description: `${course.code} ${course.title} is now visible to students.`,
-      variant: "success",
-    });
-    opts.onSuccess();
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Something went wrong.";
-    toast({
-      title: "Activation failed",
-      description: msg,
-      variant: "destructive",
-    });
-  }
-}
-
-export async function deactivateCourse(
-  course: Course,
-  opts: { onSuccess: () => void }
-) {
-  try {
-    const { error } = await toggleCourseActive(course.id, course.is_active);
-    if (error) throw new Error(error);
-    toast({
-      title: "Course deactivated",
-      description: `${course.code} ${course.title} is hidden from students.`,
-      variant: "default",
-    });
-    opts.onSuccess();
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Something went wrong.";
-    toast({
-      title: "Deactivation failed",
-      description: msg,
-      variant: "destructive",
-    });
-  }
-}
-
 export function getRowActionItems(
-  course: Course,
+  _course: Course,
   opts: {
     onView: () => void;
     onEdit: () => void;
-    onToggleActive: () => void;
     onDelete: () => void;
   }
 ) {
@@ -115,13 +66,6 @@ export function getRowActionItems(
       label: "Edit Course",
       icon: ArchiveRestore,
       onClick: opts.onEdit,
-      destructive: false,
-    },
-    {
-      key: "toggle",
-      label: course.is_active ? "Deactivate" : "Activate",
-      icon: course.is_active ? Pause : Play,
-      onClick: opts.onToggleActive,
       destructive: false,
     },
     {
@@ -200,8 +144,7 @@ function DeleteCourseModal({
               <DialogDescription className="leading-relaxed">
                 This action is <strong className="text-destructive font-semibold">permanent and cannot be undone</strong>.
                 Any links from exams, documents, or references to this course
-                may break. Prefer <em>deactivating</em> the course if it should
-                remain archived.
+                may break.
               </DialogDescription>
             </div>
           </div>
@@ -213,11 +156,8 @@ function DeleteCourseModal({
               <Badge variant="info" className="font-mono text-[11px]">
                 {targetCourse.code}
               </Badge>
-              <Badge variant={targetCourse.is_active ? "success" : "muted"} className="text-[11px]">
-                {targetCourse.is_active ? "Active" : "Inactive"}
-              </Badge>
               <Badge variant="secondary" className="text-[11px]">
-                {targetCourse.academic_year}
+                {targetCourse.department}
               </Badge>
             </div>
             <p className="font-semibold text-foreground leading-snug">
@@ -258,7 +198,7 @@ function DeleteCourseModal({
             size="sm"
           >
             <EyeOff className="w-4 h-4" />
-            Keep course
+            Cancel
           </Button>
           <Button
             variant="destructive"

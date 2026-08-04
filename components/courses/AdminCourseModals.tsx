@@ -13,14 +13,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, AlertTriangle, AlertCircle } from "lucide-react";
+import { Loader2, Plus, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import type { Course } from "@/types";
-import { cn } from "@/lib/utils";
 
 import {
   planCourseSchema as courseSchema,
@@ -82,7 +80,6 @@ function AddCourseModal({
       description: "",
       credits: 3,
       instructor: "",
-      is_active: false,
     },
   });
 
@@ -120,13 +117,13 @@ function AddCourseModal({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 sm:py-6">
-            <CourseFormFields form={form} mode="create" />
+            <CourseFormFields form={form} />
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : "Create Course"}
+              {isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Creating…</> : "Create Course"}
             </Button>
           </DialogFooter>
         </form>
@@ -158,7 +155,6 @@ function EditCourseModal({
       description: "",
       credits: 3,
       instructor: "",
-      is_active: false,
     },
   });
 
@@ -172,7 +168,6 @@ function EditCourseModal({
         description: course.description ?? "",
         credits: course.credits,
         instructor: course.instructor ?? "",
-        is_active: course.is_active,
       });
     }
   }, [open, course, form]);
@@ -201,13 +196,13 @@ function EditCourseModal({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 sm:py-6">
-            <CourseFormFields form={form} mode="edit" />
+            <CourseFormFields form={form} />
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving…</> : "Save Changes"}
+              {isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving…</> : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>
@@ -216,10 +211,8 @@ function EditCourseModal({
   );
 }
 
-function CourseFormFields({ form, mode }: { form: UseFormReturn<CourseFormData>, mode: "create" | "edit" }) {
-  const { register, watch, formState: { errors } } = form;
-
-  const is_active = watch("is_active");
+function CourseFormFields({ form }: { form: UseFormReturn<CourseFormData> }) {
+  const { register, formState: { errors } } = form;
 
   return (
     <div className="space-y-6">
@@ -251,29 +244,6 @@ function CourseFormFields({ form, mode }: { form: UseFormReturn<CourseFormData>,
             <Input type="number" {...register("year_number", { valueAsNumber: true })} min={1} />
           </Field>
         </div>
-      </section>
-
-      <div className="border-t border-border -mx-5 sm:-mx-6" />
-
-      <section className="space-y-3">
-        <div className={cn("rounded-xl border p-4 sm:p-5 transition-colors", is_active ? "border-emerald-500/20 bg-emerald-500/5" : "border-amber-500/20 bg-amber-500/5")}>
-          <label className="flex items-center justify-between gap-4 cursor-pointer">
-            <div className="flex items-start gap-3">
-              <input type="checkbox" {...register("is_active")} className="w-5 h-5 mt-0.5 accent-emerald-500" />
-              <div>
-                <p className="font-semibold text-sm">{is_active ? "Course is Active" : "Course is Draft / Inactive"}</p>
-                <p className="text-xs text-muted-foreground">Students can only see active courses matching their profile.</p>
-              </div>
-            </div>
-            <Badge variant={is_active ? "success" : "warning"}>{is_active ? "Active" : "Draft"}</Badge>
-          </label>
-        </div>
-        {!is_active && mode === "create" && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm mt-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-amber-800">New courses default to Draft. Students won&apos;t see it until you activate it.</p>
-          </div>
-        )}
       </section>
     </div>
   );

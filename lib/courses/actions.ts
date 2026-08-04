@@ -15,10 +15,9 @@ export const courseSchema = z.object({
   department: z.string().trim().min(1, "Department is required"),
   program: z.string().trim().min(1, "Program is required"),
   year_of_study: z.number().int().min(1, "Year of study must be at least 1"),
-  academic_year: z.string().trim().min(1, "Academic year is required"),
+  academic_year: z.string().trim().optional(),
   start_date: z.string().nullable().optional(),
   end_date: z.string().nullable().optional(),
-  is_active: z.boolean(),
 }).refine(
   (data) => {
     if (data.start_date && data.end_date) {
@@ -98,21 +97,4 @@ export async function deleteCourse(id: string) {
   return { success: true };
 }
 
-export async function toggleCourseActive(id: string, currentStatus: boolean) {
-  await requireAdmin();
-  const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("courses")
-    .update({ is_active: !currentStatus })
-    .eq("id", id);
-
-  if (error) {
-    console.error("Supabase toggle status error:", error);
-    return { error: "Failed to change course status." };
-  }
-
-  revalidatePath("/admin/courses");
-  revalidatePath("/admin");
-  return { success: true };
-}

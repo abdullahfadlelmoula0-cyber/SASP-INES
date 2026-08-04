@@ -135,7 +135,7 @@ export function LoginForm() {
       {/* Header */}
       <div className="space-y-2">
         <div className="flex justify-center mb-6 md:hidden">
-          <SaspInesLogo className="w-56 h-auto drop-shadow-xl" showText={true} />
+          <SaspInesLogo className="w-56 h-auto drop-shadow-xl" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Welcome back
@@ -236,9 +236,20 @@ export function LoginForm() {
         </button>
       </form>
 
-      <p className="text-center text-xs text-muted-foreground">
-        Having trouble signing in? Contact your administrator.
-      </p>
+      <div className="space-y-2 text-center">
+        <p className="text-xs text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <a
+            href="/signup"
+            className="font-medium text-primary hover:underline"
+          >
+            Sign up
+          </a>
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Having trouble signing in? Contact your administrator.
+        </p>
+      </div>
     </div>
   );
 }

@@ -27,8 +27,7 @@ export async function fetchStudentCoursesByDepartment(departmentName: string) {
     const { data, error } = await supabase
       .from("courses")
       .select("*")
-      .eq("department", departmentName) // الاعتماد على اسم القسم (النظام القديم)
-      .eq("is_active", true)
+      .eq("department", departmentName)
       .order("code", { ascending: true });
 
     return { data: (data as Course[]) ?? [], error };
@@ -36,6 +35,7 @@ export async function fetchStudentCoursesByDepartment(departmentName: string) {
     return { data: [], error: err instanceof Error ? err : new Error("Unknown error") };
   }
 }
+
 
 export async function getDistinctCourseFiltersServer(): Promise<{
   departments: string[];
@@ -47,7 +47,7 @@ export async function getDistinctCourseFiltersServer(): Promise<{
     const supabase = await createClient();
     const { data } = await supabase
       .from("courses")
-      .select("department, program, year_of_study, academic_year");
+      .select("department, program, year_of_study");
 
     if (!data) {
       return {
@@ -67,7 +67,6 @@ export async function getDistinctCourseFiltersServer(): Promise<{
       if (row.department) depts.add(row.department);
       if (row.program) progs.add(row.program);
       if (row.year_of_study) yrs.add(row.year_of_study);
-      if (row.academic_year) ays.add(row.academic_year);
     }
 
     return {

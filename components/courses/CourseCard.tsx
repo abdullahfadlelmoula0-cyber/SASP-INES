@@ -64,8 +64,8 @@ export function CourseCard({ course, onView, className }: CourseCardProps) {
                 <Clock className="w-3 h-3" />
                 {statusLabel}
               </Badge>
-              <Badge variant="success" className="text-[10.5px] px-2 py-0">
-                {course.academic_year}
+              <Badge variant="secondary" className="text-[10.5px] px-2 py-0">
+                Year {course.year_of_study ?? course.year_number}
               </Badge>
             </div>
           </div>

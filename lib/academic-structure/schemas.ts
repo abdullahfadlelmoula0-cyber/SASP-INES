@@ -46,10 +46,8 @@ export const planCourseSchema = z
     description: z.string().trim().nullable().optional(),
     credits: z.number().int().min(1, "Credits must be a positive number"),
     instructor: z.string().trim().nullable().optional(),
-    // تم حذف academic_year من هنا نهائياً
     start_date: z.string().nullable().optional(),
     end_date: z.string().nullable().optional(),
-    is_active: z.boolean(),
   })
   .refine(
     (data) => {

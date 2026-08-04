@@ -372,8 +372,8 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
                             </td>
                             <td className="px-4 py-3">{course.credits}</td>
                             <td className="px-4 py-3">
-                              <Badge variant={course.is_active ? "success" : "warning"}>
-                                {course.is_active ? "Active" : "Draft"}
+                              <Badge variant="info">
+                                Year {course.year_number}
                               </Badge>
                             </td>
                             <td className="px-4 py-3 text-right">
