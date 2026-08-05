@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, FileText, Download, Users, Calendar, Award } from "lucide-react";
+import { ArrowLeft, FileText, Download, Users, Calendar, Award, FolderOpen } from "lucide-react";
 
 interface CoursePageProps {
   params: Promise<{ id: string }>;
@@ -12,16 +12,23 @@ export default async function StudentCourseDetailsPage({ params }: CoursePagePro
   const { id } = await params;
   const supabase = await createClient();
 
-  // جلب بيانات الكورس المحدد من قاعدة البيانات
-  const { data: course, error } = await supabase
+  // 1. جلب بيانات الكورس المحدد من قاعدة البيانات
+  const { data: course, error: courseError } = await supabase
     .from("courses")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (error || !course) {
+  if (courseError || !course) {
     notFound();
   }
+
+  // 2. جلب المستندات والملفات الحقيقية المرتبطة بهذا الكورس من جدول documents
+  const { data: documents, error: docsError } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("course_id", id)
+    .order("created_at", { ascending: false });
 
   return (
     <div className="space-y-6 p-6 max-w-5xl mx-auto">
@@ -49,13 +56,13 @@ export default async function StudentCourseDetailsPage({ params }: CoursePagePro
           </div>
         </div>
 
-        {/* إحصائيات ومعلومات الكورس */}
+        {/* إحصائيات ومعلومات الكورس الحقيقية */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t">
           <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
             <Award className="w-5 h-5 text-primary" />
             <div>
               <p className="text-xs text-muted-foreground">Credits</p>
-              <p className="font-semibold">{course.credits}</p>
+              <p className="font-semibold">{course.credits ?? "—"}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
@@ -75,27 +82,40 @@ export default async function StudentCourseDetailsPage({ params }: CoursePagePro
         </div>
       </div>
 
-      {/* قسم محتويات ومواد الكورس */}
+      {/* قسم مستندات ومفات الكورس الحقيقية */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Course Materials & Lectures</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Course Materials & Documents</h2>
         
-        <div className="grid gap-3">
-          <div className="flex items-center justify-between p-4 bg-card border rounded-xl shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                <FileText className="w-5 h-5" />
+        {documents && documents.length > 0 ? (
+          <div className="grid gap-3">
+            {documents.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between p-4 bg-card border rounded-xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">{doc.title}</h3>
+                    <p className="text-xs text-muted-foreground">{doc.description || doc.file_name || "No additional description"}</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="gap-2" asChild>
+                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                    <Download className="w-4 h-4" />
+                    Download
+                  </a>
+                </Button>
               </div>
-              <div>
-                <h3 className="font-semibold text-sm">Introduction to {course.title}</h3>
-                <p className="text-xs text-muted-foreground">Course syllabus and introductory material</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Download className="w-4 h-4" />
-              Download
-            </Button>
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-8 bg-card border rounded-2xl text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+              <FolderOpen className="w-6 h-6" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">No documents or materials uploaded for this course yet.</p>
+          </div>
+        )}
       </div>
     </div>
   );
