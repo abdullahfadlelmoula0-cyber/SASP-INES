@@ -2,121 +2,125 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, FileText, Download, Users, Calendar, Award, FolderOpen } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
+import { CourseDetailTabs } from "@/components/courses/CourseDetailTabs";
+import type { Document, Exam } from "@/types";
 
 interface CoursePageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: CoursePageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: course } = await supabase
+    .from("courses")
+    .select("title, code")
+    .eq("id", id)
+    .single();
+
+  return {
+    title: course ? `${course.code} — ${course.title}` : "Course",
+    description: `Course materials, documents, and past exams for ${course?.title ?? "this course"}.`,
+  };
 }
 
 export default async function StudentCourseDetailsPage({ params }: CoursePageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
-  // 1. جلب بيانات الكورس المحدد من قاعدة البيانات
-  const { data: course, error: courseError } = await supabase
+  // ── 1. Course ─────────────────────────────────────────────────
+  const { data: course, error } = await supabase
     .from("courses")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (courseError || !course) {
+  if (error || !course) {
     notFound();
   }
 
-  // 2. جلب المستندات والملفات الحقيقية المرتبطة بهذا الكورس من جدول documents
-  const { data: documents, error: docsError } = await supabase
+  // ── 2. Documents for this course ───────────────────────────────
+  const { data: documents } = await supabase
     .from("documents")
-    .select("*")
+    .select("id, title, description, category, file_url, file_name, file_size_bytes, created_at")
     .eq("course_id", id)
     .order("created_at", { ascending: false });
 
-  return (
-    <div className="space-y-6 p-6 max-w-5xl mx-auto">
-      {/* زر العودة */}
-      <div>
-        <Button variant="ghost" asChild className="gap-2">
-          <Link href="/courses">
-            <ArrowLeft className="w-4 h-4" />
-            Back to My Courses
-          </Link>
-        </Button>
-      </div>
+  // ── 3. Exams for this course ───────────────────────────────────
+  const { data: exams } = await supabase
+    .from("exams")
+    .select("id, title, exam_type, academic_year, file_url, file_name, file_size_bytes, created_at")
+    .eq("course_id", id)
+    .order("created_at", { ascending: false });
 
-      {/* رأس صفحة المادة */}
-      <div className="bg-card border rounded-2xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <span className="font-mono bg-primary/10 text-primary px-3 py-1 rounded-md text-sm font-bold">
+  // ── Initials for the avatar ────────────────────────────────────
+  const initials = course.code
+    ? course.code.replace(/[^A-Z0-9]/gi, "").slice(0, 3).toUpperCase()
+    : course.title.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+
+  return (
+    <div className="space-y-6 p-4 sm:p-6 max-w-3xl mx-auto pb-24 md:pb-8">
+      {/* Back button */}
+      <Button variant="ghost" asChild className="gap-2 -ml-2">
+        <Link href="/courses">
+          <ArrowLeft className="w-4 h-4" />
+          Back to My Courses
+        </Link>
+      </Button>
+
+      {/* Course header card */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
+        {/* Title row */}
+        <div className="flex items-start gap-4">
+          <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm font-mono border border-primary/20">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono bg-primary/10 text-primary px-2.5 py-0.5 rounded-md text-xs font-bold">
                 {course.code}
               </span>
-              <h1 className="text-2xl font-bold">{course.title}</h1>
             </div>
-            <p className="text-muted-foreground">{course.description || "No description provided."}</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight mt-1 leading-snug">
+              {course.title}
+            </h1>
+            {course.description && (
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                {course.description}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* إحصائيات ومعلومات الكورس الحقيقية */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t">
-          <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
-            <Award className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-xs text-muted-foreground">Credits</p>
-              <p className="font-semibold">{course.credits ?? "—"}</p>
-            </div>
+        {/* Quick stats */}
+        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border">
+          <div className="text-center">
+            <p className="text-lg font-bold text-foreground">{course.credits ?? "—"}</p>
+            <p className="text-[11px] text-muted-foreground">Credits</p>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
-            <Calendar className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-xs text-muted-foreground">Year of Study</p>
-              <p className="font-semibold">Year {course.year_of_study ?? course.year_number ?? "—"}</p>
-            </div>
+          <div className="text-center border-x border-border">
+            <p className="text-lg font-bold text-foreground">
+              Yr {course.year_of_study ?? course.year_number ?? "—"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Year</p>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
-            <Users className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-xs text-muted-foreground">Instructor</p>
-              <p className="font-semibold">{course.instructor || "Not assigned"}</p>
-            </div>
+          <div className="text-center">
+            <p className="text-lg font-bold text-foreground truncate px-1">
+              {course.instructor ? course.instructor.split(" ")[0] : "—"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Instructor</p>
           </div>
         </div>
       </div>
 
-      {/* قسم مستندات ومفات الكورس الحقيقية */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Course Materials & Documents</h2>
-        
-        {documents && documents.length > 0 ? (
-          <div className="grid gap-3">
-            {documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between p-4 bg-card border rounded-xl shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">{doc.title}</h3>
-                    <p className="text-xs text-muted-foreground">{doc.description || doc.file_name || "No additional description"}</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                    <Download className="w-4 h-4" />
-                    Download
-                  </a>
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-8 bg-card border rounded-2xl text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-              <FolderOpen className="w-6 h-6" />
-            </div>
-            <p className="text-sm font-medium text-muted-foreground">No documents or materials uploaded for this course yet.</p>
-          </div>
-        )}
-      </div>
+      {/* Tabs: Documents / Exams / Info */}
+      <CourseDetailTabs
+        course={course}
+        documents={(documents ?? []) as Document[]}
+        exams={(exams ?? []) as Exam[]}
+      />
     </div>
   );
 }

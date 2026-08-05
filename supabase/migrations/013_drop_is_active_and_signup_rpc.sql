@@ -122,11 +122,10 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
-  -- Guard: one profile per user only
-  IF EXISTS (SELECT 1 FROM public.profiles WHERE id = v_user_id) THEN
-    RAISE EXCEPTION 'Profile already exists for this account';
-  END IF;
-
+  -- UPSERT: the handle_new_user trigger fires on auth.signUp() and inserts
+  -- a bare profile row (id, email, full_name only).  By the time the client
+  -- calls this RPC the row already exists, so we UPDATE it with the full
+  -- academic profile the student chose in the sign-up form.
   INSERT INTO public.profiles (
     id,
     full_name,
@@ -151,7 +150,18 @@ BEGIN
     p_department_name,
     p_program_name,
     now()
-  );
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    full_name         = EXCLUDED.full_name,
+    university_email  = EXCLUDED.university_email,
+    role              = 'student',           -- always enforce student role
+    academic_plan_id  = EXCLUDED.academic_plan_id,
+    specialization_id = EXCLUDED.specialization_id,
+    year_of_study     = EXCLUDED.year_of_study,
+    academic_year     = EXCLUDED.academic_year,
+    department        = EXCLUDED.department,
+    program           = EXCLUDED.program,
+    updated_at        = now();
 END;
 $$;
 

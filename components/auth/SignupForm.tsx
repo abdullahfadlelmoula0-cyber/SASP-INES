@@ -48,7 +48,7 @@ export function SignupForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [departmentId, setDepartmentId] = useState("");
   const [academicPlanId, setAcademicPlanId] = useState("");
-  const [yearOfStudy, setYearOfStudy] = useState(1);
+  const [yearOfStudy, setYearOfStudy] = useState(0); // 0 = not selected
   const [specializationId, setSpecializationId] = useState<string>("");
   const [academicYear, setAcademicYear] = useState("2025-2026");
 
@@ -116,7 +116,12 @@ export function SignupForm() {
 
   useEffect(() => {
     setSpecializationId("");
-  }, [academicPlanId, yearOfStudy]);
+    setYearOfStudy(0); // reset year when plan changes
+  }, [academicPlanId]);
+
+  useEffect(() => {
+    setSpecializationId("");
+  }, [yearOfStudy]);
 
   // ── Submit ────────────────────────────────────────────────────
 function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -131,6 +136,10 @@ function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
       setError("Please select an academic plan.");
       return;
     }
+    if (!yearOfStudy || yearOfStudy < 1) {
+      setError("Please select your current year of study.");
+      return;
+    }
     if (specializationRequired && !specializationId) {
       setError("Please select a specialization for your year of study.");
       return;
@@ -139,7 +148,7 @@ function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     startTransition(async () => {
       const supabase = createClient();
 
-      // 1. إنشاء حساب المصادقة فقط - الـ Trigger في الخلفية سيقوم بالباقي تلقائياً
+      // ── Step 1: Create the auth user ─────────────────────────
       const { data: authData, error: authError } =
         await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
@@ -154,6 +163,42 @@ function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         return;
       }
 
+      // ── Step 2: Resolve display names from in-memory structure ─
+      // (The handle_new_user trigger only saves id/email/full_name.
+      //  We must call the RPC to write the actual academic profile.)
+      const deptName =
+        departments.find((d) => d.id === departmentId)?.name ?? "";
+      const plan = departments
+        .flatMap((d) => d.academic_plans)
+        .find((p) => p.id === academicPlanId);
+      const programName = plan?.name ?? "";
+
+      // ── Step 3: Write the full academic profile via SECURITY DEFINER RPC ─
+      const { error: rpcError } = await supabase.rpc(
+        "create_student_profile",
+        {
+          p_full_name:         fullName.trim(),
+          p_university_email:  email.trim().toLowerCase(),
+          p_academic_plan_id:  academicPlanId,
+          p_specialization_id: specializationId || null,
+          p_year_of_study:     yearOfStudy,
+          p_academic_year:     academicYear,
+          p_department_name:   deptName,
+          p_program_name:      programName,
+        }
+      );
+
+      if (rpcError) {
+        // If the RPC fails, we still have the auth user — show a clear error
+        // so the student knows to contact support rather than signing up again.
+        setError(
+          `Account created but profile could not be saved: ${rpcError.message}. ` +
+          `Please contact your administrator with your email address.`
+        );
+        return;
+      }
+
+      // ── Step 4: Done ─────────────────────────────────────────
       setSuccess(true);
       setTimeout(() => router.push("/dashboard"), 2000);
     });
@@ -338,16 +383,23 @@ function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
           {/* Year of Study + Academic Year */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Year of Study" htmlFor="year">
-              <input
+              <select
                 id="year"
-                type="number"
                 required
-                min={1}
-                max={maxYear}
                 value={yearOfStudy}
                 onChange={(e) => setYearOfStudy(Number(e.target.value))}
-                className={inputCls}
-              />
+                disabled={!academicPlanId}
+                className={selectCls}
+              >
+                <option value={0} disabled>
+                  {!academicPlanId ? "Select a plan first" : "Select Year"}
+                </option>
+                {Array.from({ length: maxYear }, (_, i) => i + 1).map((yr) => (
+                  <option key={yr} value={yr}>
+                    Year {yr}{selectedPlan && yr === selectedPlan.shared_years ? " (last shared)" : ""}
+                  </option>
+                ))}
+              </select>
               {selectedPlan && (
                 <p className="text-[11px] text-muted-foreground mt-1">
                   Shared trunk: {selectedPlan.shared_years} yr

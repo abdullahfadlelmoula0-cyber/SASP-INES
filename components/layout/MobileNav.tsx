@@ -6,36 +6,36 @@ import {
   LayoutDashboard,
   User,
   BookOpen,
-  FileText,
   FolderOpen,
   Bell,
   Users,
   Settings,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 
+// ── Student nav: 5 items (Exams removed — accessible inside course detail) ──
 const studentNavItems = [
   { href: "/dashboard",     label: "Home",    icon: LayoutDashboard },
   { href: "/courses",       label: "Courses", icon: BookOpen },
-  { href: "/exams",         label: "Exams",   icon: FileText },
   { href: "/documents",     label: "Docs",    icon: FolderOpen },
   { href: "/announcements", label: "News",    icon: Bell },
   { href: "/profile",       label: "Profile", icon: User },
 ];
 
+// ── Admin nav: 5 items ──────────────────────────────────────────
 const adminNavItems = [
-  { href: "/admin",              label: "Home",     icon: LayoutDashboard },
-  { href: "/admin/students",     label: "Students", icon: Users },
-  { href: "/admin/courses",      label: "Courses",  icon: BookOpen },
-  { href: "/admin/exams",        label: "Exams",    icon: FileText },
-  { href: "/admin/documents",    label: "Docs",     icon: FolderOpen },
-  { href: "/admin/settings",     label: "Settings", icon: Settings },
+  { href: "/admin",           label: "Home",     icon: LayoutDashboard },
+  { href: "/admin/students",  label: "Students", icon: Users },
+  { href: "/admin/courses",   label: "Courses",  icon: BookOpen },
+  { href: "/admin/documents", label: "Docs",     icon: FolderOpen },
+  { href: "/admin/settings",  label: "Settings", icon: Settings },
 ];
 
 /**
  * Mobile bottom navigation bar — visible only on small screens (md:hidden).
- * Renders admin nav items for admin users, student items otherwise.
+ * 5 items, pill-style active indicator, 48px min-height tap targets.
  */
 export function MobileNav() {
   const pathname = usePathname();
@@ -45,24 +45,43 @@ export function MobileNav() {
 
   return (
     <nav
-      className="md:hidden flex items-center justify-around border-t border-border bg-card px-2 py-2 safe-bottom"
+      className="md:hidden flex items-center justify-around border-t border-border bg-card/95 backdrop-blur-sm px-1 py-1 safe-bottom"
       aria-label="Mobile navigation"
     >
       {navItems.map((item) => {
         const isActive =
-          pathname === item.href || pathname.startsWith(item.href + "/");
+          item.href === "/dashboard" || item.href === "/admin"
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(item.href + "/");
+
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={cn(
-              "flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-colors min-w-[3rem]",
-              isActive ? "text-primary" : "text-muted-foreground"
-            )}
             aria-current={isActive ? "page" : undefined}
+            className={cn(
+              // Base: column flex, minimum 48px tap target
+              "flex flex-col items-center justify-center gap-1 min-h-[48px] px-3 py-1.5 rounded-xl transition-all duration-200",
+              // Active pill
+              isActive
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            )}
           >
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <item.icon
+              className={cn(
+                "transition-transform duration-200",
+                isActive ? "w-[22px] h-[22px] scale-110" : "w-[20px] h-[20px]"
+              )}
+            />
+            <span
+              className={cn(
+                "text-[11px] font-medium leading-none",
+                isActive ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              {item.label}
+            </span>
           </Link>
         );
       })}
