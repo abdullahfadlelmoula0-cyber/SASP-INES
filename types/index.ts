@@ -248,6 +248,13 @@ export interface AnnouncementAttachment {
   created_at: string;
 }
 
+/** Subset of AcademicPlan fields used when joined on announcements. */
+export interface AnnouncementAcademicPlanJoin {
+  id: string;
+  name: string;
+  department?: { name: string } | null;
+}
+
 export interface Announcement extends Partial<AcademicTarget> {
   id: string;
   title: string;
@@ -260,6 +267,11 @@ export interface Announcement extends Partial<AcademicTarget> {
   cover_image_url: string | null;
   created_at: string;
   updated_at: string;
+  /** Structured targeting FK → academic_plans.id (optional; NULL = global). */
+  academic_plan_id: string | null;
+  /** Optional joined AcademicPlan (with nested department.name) when read
+   *  via `.select(..., academic_plan:academic_plans!inner(name, department:departments(name)))`. */
+  academic_plan?: AnnouncementAcademicPlanJoin | null;
   // Joined attachments
   announcement_attachments?: AnnouncementAttachment[];
 }

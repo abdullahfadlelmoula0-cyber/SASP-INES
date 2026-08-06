@@ -63,7 +63,8 @@ export async function createStudent(data: StudentFormData) {
 
     // Department admin can only create students in their own department
     if (actorDepartmentId) {
-      const { data: plan } = await createClient()
+      const sb = await createClient();
+      const { data: plan } = await sb
         .from("academic_plans")
         .select("department_id")
         .eq("id", parsed.data.academic_plan_id)
@@ -137,7 +138,8 @@ export async function updateStudent(id: string, data: StudentFormData) {
 
     // Department admin can only update students in their own department
     if (actorDepartmentId) {
-      const { data: plan } = await createClient()
+      const sb = await createClient();
+      const { data: plan } = await sb
         .from("academic_plans")
         .select("department_id")
         .eq("id", parsed.data.academic_plan_id)

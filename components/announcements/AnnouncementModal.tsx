@@ -51,6 +51,30 @@ export function AnnouncementModal({ isOpen, onClose, onSuccess, announcement }: 
 
   const isEditMode = !!announcement;
 
+  // Avoid the union-form type clash between Create vs Update schemas.
+  // react-hook-form + zodResolver can infer fine from the union; the TS
+  // compile error is over the strict resolver type which we intentionally
+  // relax here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeSchema: any = isEditMode ? updateAnnouncementSchema : createAnnouncementSchema;
+
+  const defaultVals = isEditMode
+    ? ({
+        id: announcement.id,
+        title: announcement.title,
+        body: announcement.body,
+        priority: announcement.priority,
+        is_pinned: announcement.is_pinned,
+        academic_plan_id: announcement.academic_plan_id,
+        duration: "forever",
+      } as CreateAnnouncementInput & { id?: string })
+    : ({
+        priority: "normal",
+        is_pinned: false,
+        duration: "forever",
+        academic_plan_id: null,
+      } as CreateAnnouncementInput);
+
   const {
     register,
     handleSubmit,
@@ -59,23 +83,10 @@ export function AnnouncementModal({ isOpen, onClose, onSuccess, announcement }: 
     control,
     setValue,
     watch,
-  } = useForm<CreateAnnouncementInput | UpdateAnnouncementInput>({
-    resolver: zodResolver(isEditMode ? updateAnnouncementSchema : createAnnouncementSchema),
-    defaultValues: isEditMode
-      ? {
-          title: announcement.title,
-          body: announcement.body,
-          priority: announcement.priority,
-          is_pinned: announcement.is_pinned,
-          academic_plan_id: announcement.academic_plan_id,
-          duration: "forever",
-        }
-      : {
-          priority: "normal",
-          is_pinned: false,
-          duration: "forever",
-          academic_plan_id: null,
-        },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } = useForm<any>({
+    resolver: zodResolver(activeSchema),
+    defaultValues: defaultVals,
   });
 
   const academicPlanId = watch("academic_plan_id");
@@ -195,13 +206,14 @@ export function AnnouncementModal({ isOpen, onClose, onSuccess, announcement }: 
   }
 
   async function onSubmit(data: CreateAnnouncementInput | UpdateAnnouncementInput) {
+    const values = data;
     setIsSubmitting(true);
 
     try {
       // Step 1: Create or update announcement first
       const result = isEditMode
-        ? await updateAnnouncement({ ...data, id: announcement.id } as UpdateAnnouncementInput)
-        : await createAnnouncement(data as CreateAnnouncementInput);
+        ? await updateAnnouncement({ ...values, id: announcement.id } as UpdateAnnouncementInput)
+        : await createAnnouncement(values as CreateAnnouncementInput);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to save announcement");
@@ -270,7 +282,7 @@ export function AnnouncementModal({ isOpen, onClose, onSuccess, announcement }: 
           <DialogTitle>{isEditMode ? "Edit Announcement" : "Create New Announcement"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit as Parameters<typeof handleSubmit>[0])} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
@@ -280,7 +292,11 @@ export function AnnouncementModal({ isOpen, onClose, onSuccess, announcement }: 
               placeholder="Important: Campus closure notice"
               className={errors.title ? "border-destructive" : ""}
             />
-            {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+            {errors.title && (
+              <p className="text-xs text-destructive">
+                {typeof errors.title?.message === "string" ? errors.title.message : ""}
+              </p>
+            )}
           </div>
 
           {/* Body */}
@@ -293,7 +309,11 @@ export function AnnouncementModal({ isOpen, onClose, onSuccess, announcement }: 
               rows={6}
               className={errors.body ? "border-destructive" : ""}
             />
-            {errors.body && <p className="text-xs text-destructive">{errors.body.message}</p>}
+            {errors.body && (
+              <p className="text-xs text-destructive">
+                {typeof errors.body?.message === "string" ? errors.body.message : ""}
+              </p>
+            )}
           </div>
 
           {/* Priority & Pinned */}

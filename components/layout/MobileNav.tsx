@@ -1,5 +1,6 @@
 "use client";
 
+import type { ElementType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -39,9 +40,19 @@ const adminNavItems = [
  */
 export function MobileNav() {
   const pathname = usePathname();
-  const { isAdmin } = useUser();
+  const { isAdmin, isDepartmentAdmin, profile } = useUser();
 
-  const navItems = isAdmin ? adminNavItems : studentNavItems;
+  // For department admins, replace "Docs" with a "Department" link to
+  // their own academic-structure page.
+  const navItems = isAdmin
+    ? isDepartmentAdmin && profile?.managed_department_id
+      ? adminNavItems.map((item) =>
+          item.href === "/admin/documents"
+            ? { href: `/admin/academic-structure/${profile.managed_department_id}`, label: "Dept", icon: FolderOpen as ElementType }
+            : item
+        )
+      : adminNavItems
+    : studentNavItems;
 
   return (
     <nav

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ElementType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -36,6 +37,13 @@ const adminNavItems = [
   { href: "/admin/exams",         label: "Documents",           icon: FileText },
 ];
 
+// Department admin overrides: "Documents" → "Department" (links to academic structure)
+const deptAdminNavOverrides: { href: string; label: string; icon: ElementType } = {
+  href: "/admin/academic-structure",
+  label: "Department",
+  icon: Building2,
+};
+
 // General admin-only items
 const adminOnlyNavItems = [
   { href: "/admin/academic-structure", label: "Academic Structure", icon: Building2 },
@@ -46,7 +54,20 @@ const adminOnlyNavItems = [
 export function Sidebar({ courseCount }: { courseCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAdmin, isGeneralAdmin, isLoading } = useUser();
+  const { isAdmin, isGeneralAdmin, isDepartmentAdmin, profile, isLoading } = useUser();
+
+  // Build nav items for department admins: replace "Documents" with "Department"
+  // linking to their own academic-structure page.
+  const effectiveAdminNavItems = isDepartmentAdmin && profile?.managed_department_id
+    ? adminNavItems.map((item) =>
+        item.href === "/admin/exams"
+          ? {
+              ...deptAdminNavOverrides,
+              href: `/admin/academic-structure/${profile.managed_department_id}`,
+            }
+          : item
+      )
+    : adminNavItems;
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -123,7 +144,7 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
                 {isGeneralAdmin ? "Administration" : "Dept. Administration"}
               </p>
             </div>
-            {adminNavItems.map((item) => (
+            {effectiveAdminNavItems.map((item) => (
               <NavItem
                 key={item.href}
                 {...item}
