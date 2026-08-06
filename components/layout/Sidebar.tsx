@@ -56,17 +56,21 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
   const router = useRouter();
   const { isAdmin, isGeneralAdmin, isDepartmentAdmin, profile, isLoading } = useUser();
 
-  // Build nav items for department admins: replace "Documents" with "Department"
-  // linking to their own academic-structure page.
+  // Build nav items for department admins: replace "Documents" AND
+  // "Courses" with links into their own academic-structure page — the
+  // legacy /admin/courses page writes plain department/program text and
+  // never sets academic_plan_id, so a department_admin's writes there
+  // would silently fail RLS (can_manage_plan requires a real plan id).
   const effectiveAdminNavItems = isDepartmentAdmin && profile?.managed_department_id
-    ? adminNavItems.map((item) =>
-        item.href === "/admin/exams"
-          ? {
-              ...deptAdminNavOverrides,
-              href: `/admin/academic-structure/${profile.managed_department_id}`,
-            }
-          : item
-      )
+    ? adminNavItems.map((item) => {
+        if (item.href === "/admin/exams") {
+          return { ...deptAdminNavOverrides, href: `/admin/academic-structure/${profile.managed_department_id}` };
+        }
+        if (item.href === "/admin/courses") {
+          return { ...item, href: `/admin/academic-structure/${profile.managed_department_id}` };
+        }
+        return item;
+      })
     : adminNavItems;
 
   async function handleSignOut() {

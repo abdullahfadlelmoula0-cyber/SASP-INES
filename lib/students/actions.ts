@@ -245,10 +245,12 @@ export async function getAllStudents() {
       .in("role", actorDepartmentId ? ["student"] : ["student", "department_admin"])
       .order("full_name", { ascending: true });
 
-    // Department admin only sees students in their department
-    if (actorDepartmentId) {
-      query = query.eq("academic_plans.department_id", actorDepartmentId);
-    }
+    // NOTE: no extra .eq("academic_plans.department_id", ...) filter here.
+    // RLS policy `profiles_select_department_admin` already restricts
+    // rows to the department_admin's own department at the database
+    // level (via can_manage_plan(academic_plan_id)) — an embedded-column
+    // filter here would need academic_plans to be embedded in .select()
+    // to work at all, and would just duplicate what RLS already enforces.
 
     const { data, error } = await query;
 
