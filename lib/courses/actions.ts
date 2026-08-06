@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
 import { createClient } from "@/lib/supabase/server";
 
 // Zod schema for course input
@@ -33,13 +33,57 @@ export const courseSchema = z.object({
 
 export type CourseFormData = z.infer<typeof courseSchema>;
 
+/**
+ * Returns the department ID the current actor is scoped to.
+ * General admin → null (no restriction)
+ * department_admin → their managed_department_id
+ */
+async function getCourseActorScope(): Promise<string | null> {
+  const actor = await requireAdminOrDepartmentAdmin();
+  if (actor.role === "admin") return null;
+  return actor.managed_department_id ?? null;
+}
+
+/**
+ * Checks if the current actor can manage courses for the given academic plan.
+ * Returns true if the plan belongs to the actor's department.
+ */
+async function canManageCourseForPlan(academicPlanId: string): Promise<boolean> {
+  const deptId = await getCourseActorScope();
+  if (!deptId) return true; // general admin
+
+  const supabase = await createClient();
+  const { data: plan } = await supabase
+    .from("academic_plans")
+    .select("department_id")
+    .eq("id", academicPlanId)
+    .single();
+
+  return plan?.department_id === deptId;
+}
+
 export async function createCourse(data: CourseFormData) {
-  await requireAdmin();
+  const actor = await requireAdminOrDepartmentAdmin();
   const supabase = await createClient();
 
   const parsed = courseSchema.safeParse(data);
   if (!parsed.success) {
     return { error: parsed.error.errors[0].message };
+  }
+
+  // Department admin: check scope
+  if (actor.role === "department_admin") {
+    // Verify the department matches
+    if (parsed.data.department) {
+      const { data: dept } = await supabase
+        .from("departments")
+        .select("id")
+        .eq("name", parsed.data.department)
+        .single();
+      if (dept?.id !== actor.managed_department_id) {
+        return { error: "You can only create courses in your own department." };
+      }
+    }
   }
 
   const { error } = await supabase.from("courses").insert([parsed.data]);
@@ -58,12 +102,26 @@ export async function createCourse(data: CourseFormData) {
 }
 
 export async function updateCourse(id: string, data: CourseFormData) {
-  await requireAdmin();
+  const actor = await requireAdminOrDepartmentAdmin();
   const supabase = await createClient();
 
   const parsed = courseSchema.safeParse(data);
   if (!parsed.success) {
     return { error: parsed.error.errors[0].message };
+  }
+
+  // Department admin: check scope
+  if (actor.role === "department_admin") {
+    if (parsed.data.department) {
+      const { data: dept } = await supabase
+        .from("departments")
+        .select("id")
+        .eq("name", parsed.data.department)
+        .single();
+      if (dept?.id !== actor.managed_department_id) {
+        return { error: "You can only edit courses in your own department." };
+      }
+    }
   }
 
   const { error } = await supabase.from("courses").update(parsed.data).eq("id", id);
@@ -82,7 +140,7 @@ export async function updateCourse(id: string, data: CourseFormData) {
 }
 
 export async function deleteCourse(id: string) {
-  await requireAdmin();
+  const actor = await requireAdminOrDepartmentAdmin();
   const supabase = await createClient();
 
   const { error } = await supabase.from("courses").delete().eq("id", id);

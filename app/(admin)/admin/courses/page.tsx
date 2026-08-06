@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
 import { AdminCoursesClient } from "@/components/courses/AdminCoursesClient";
 
 export const metadata: Metadata = {
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminCoursesPage() {
-  await requireAdmin();
+  await requireAdminOrDepartmentAdmin();
 
   return <AdminCoursesClient />;
 }

@@ -1,8 +1,9 @@
 // Save as: app/admin/academic-structure/[departmentId]/page.tsx
-// (adjust the route group / folder name to match your other /admin
-// pages, e.g. app/(admin)/admin/academic-structure/[departmentId]/page.tsx)
+// (adjust the route group / folder name to match how your other /admin
+// pages are nested, e.g. app/(admin)/admin/academic-structure/[departmentId]/page.tsx)
 
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
+import { redirect } from "next/navigation";
 import { AdminDepartmentDetailClient } from "@/components/academic-structure/AdminDepartmentDetailClient";
 
 export default async function DepartmentDetailPage({
@@ -10,7 +11,13 @@ export default async function DepartmentDetailPage({
 }: {
   params: Promise<{ departmentId: string }>;
 }) {
-  await requireAdmin();
+  const profile = await requireAdminOrDepartmentAdmin();
   const { departmentId } = await params;
+
+  // Department admins can only access their own department
+  if (profile.role === "department_admin" && profile.managed_department_id !== departmentId) {
+    redirect(`/admin/academic-structure/${profile.managed_department_id}`);
+  }
+
   return <AdminDepartmentDetailClient departmentId={departmentId} />;
 }

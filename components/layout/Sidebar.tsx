@@ -29,20 +29,24 @@ const studentNavItems = [
 ];
 
 const adminNavItems = [
-  { href: "/admin",               label: "Dashboard",     icon: LayoutDashboard },
-  { href: "/admin/students",      label: "Students",      icon: Users },
+  { href: "/admin",               label: "Dashboard",           icon: LayoutDashboard },
+  { href: "/admin/students",      label: "Students",            icon: Users },
+  { href: "/admin/courses",       label: "Courses",             icon: BookOpen },
+  { href: "/admin/announcements", label: "Announcements",       icon: Bell },
+  { href: "/admin/exams",         label: "Documents",           icon: FileText },
+];
+
+// General admin-only items
+const adminOnlyNavItems = [
   { href: "/admin/academic-structure", label: "Academic Structure", icon: Building2 },
-  { href: "/admin/courses",       label: "Courses",       icon: BookOpen }, // <--- أضفنا زر الكورسات هنا
-  { href: "/admin/exams",         label: "Documents",         icon: FileText },
-  { href: "/admin/announcements", label: "Announcements", icon: Bell },
   { href: "/admin/graduation-ai", label: "Graduation AI", icon: GraduationCap },
-  { href: "/admin/settings",      label: "Settings",      icon: Settings },
+  { href: "/admin/settings",      label: "Settings",            icon: Settings },
 ];
 
 export function Sidebar({ courseCount }: { courseCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAdmin, isLoading } = useUser();
+  const { isAdmin, isGeneralAdmin, isLoading } = useUser();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -116,7 +120,7 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
             <div className="flex items-center gap-2 px-3 mb-2">
               <Shield className="w-3 h-3 text-amber-400" />
               <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/80">
-                Administration
+                {isGeneralAdmin ? "Administration" : "Dept. Administration"}
               </p>
             </div>
             {adminNavItems.map((item) => (
@@ -124,6 +128,13 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
                 key={item.href}
                 {...item}
                 badge={item.href === "/admin/courses" && courseCount !== undefined ? courseCount : undefined}
+              />
+            ))}
+            {/* General admin-only navigation items */}
+            {isGeneralAdmin && adminOnlyNavItems.map((item) => (
+              <NavItem
+                key={item.href}
+                {...item}
               />
             ))}
           </div>

@@ -29,8 +29,12 @@ interface UseUserReturn {
   isLoading: boolean;
   /** Convenience: true when authenticated AND profile exists */
   isAuthenticated: boolean;
-  /** Convenience: true when the user's role is 'admin' */
+  /** Convenience: true when the user's role is 'admin' or 'department_admin' */
   isAdmin: boolean;
+  /** Convenience: true only for general admin (not department_admin) */
+  isGeneralAdmin: boolean;
+  /** Convenience: true only for department_admin */
+  isDepartmentAdmin: boolean;
   /** Full discriminated auth state — prefer this for new code */
   authState: AuthState;
 }
@@ -120,7 +124,13 @@ export function useUser(): UseUserReturn {
     isAuthenticated: authState.status === "authenticated",
     isAdmin:
       authState.status === "authenticated" &&
+      (authState.profile.role === "admin" || authState.profile.role === "department_admin"),
+    isGeneralAdmin:
+      authState.status === "authenticated" &&
       authState.profile.role === "admin",
+    isDepartmentAdmin:
+      authState.status === "authenticated" &&
+      authState.profile.role === "department_admin",
     authState,
   };
 }

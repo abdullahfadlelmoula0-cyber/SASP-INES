@@ -30,9 +30,11 @@ import {
   deleteStudent,
   getAllStudents,
   getAcademicStructureOptions,
+  getActorRoleInfo,
   type AcademicStructureDepartment,
 } from "@/lib/students/actions";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { cn } from "@/lib/utils";
 
 export interface Student {
   id: string;
@@ -42,9 +44,10 @@ export interface Student {
   program?: string;
   year_of_study: number;
   academic_year?: string;
-  role: "STUDENT" | "ADMIN";
+  role: "STUDENT" | "ADMIN" | "DEPARTMENT_ADMIN";
   academic_plan_id?: string | null;
   specialization_id?: string | null;
+  managed_department_id?: string | null;
 }
 
 export default function AdminStudentsPage() {
@@ -55,10 +58,14 @@ export default function AdminStudentsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [actorRole, setActorRole] = useState<"admin" | "department_admin">("admin");
+  const [managedDepartmentId, setManagedDepartmentId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("ALL");
   const [selectedYear, setSelectedYear] = useState("ALL");
+
+  const isGeneralAdmin = actorRole === "admin";
 
   async function loadStudents() {
     setLoading(true);
@@ -76,9 +83,10 @@ export default function AdminStudentsPage() {
           program: p.program || "",
           year_of_study: p.year_of_study,
           academic_year: p.academic_year,
-          role: (p.role || "student").toUpperCase() as "STUDENT" | "ADMIN",
+          role: (p.role === "department_admin" ? "DEPARTMENT_ADMIN" : p.role === "admin" ? "ADMIN" : "STUDENT") as "STUDENT" | "ADMIN" | "DEPARTMENT_ADMIN",
           academic_plan_id: p.academic_plan_id ?? null,
           specialization_id: p.specialization_id ?? null,
+          managed_department_id: p.managed_department_id ?? null,
         }))
       );
     }
@@ -87,6 +95,10 @@ export default function AdminStudentsPage() {
 
   useEffect(() => {
     void loadStudents();
+    getActorRoleInfo().then((info) => {
+      setActorRole(info.role);
+      setManagedDepartmentId(info.managed_department_id);
+    });
   }, []);
 
   const filteredStudents = useMemo(() => {
@@ -305,8 +317,16 @@ export default function AdminStudentsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-widest">
-                        {student.role}
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] uppercase tracking-widest",
+                          student.role === "ADMIN" && "border-blue-300 bg-blue-50 text-blue-700",
+                          student.role === "DEPARTMENT_ADMIN" && "border-purple-300 bg-purple-50 text-purple-700",
+                          student.role === "STUDENT" && ""
+                        )}
+                      >
+                        {student.role === "DEPARTMENT_ADMIN" ? "DEPT ADMIN" : student.role}
                       </Badge>
                     </td>
                     <td className="px-4 py-3.5 text-right">
@@ -344,6 +364,8 @@ export default function AdminStudentsPage() {
           setEditingStudent(null);
         }}
         student={editingStudent}
+        actorRole={actorRole}
+        managedDepartmentId={managedDepartmentId}
         onSuccess={() => {
           void loadStudents();
         }}
@@ -378,11 +400,15 @@ function StudentFormModal({
   open,
   onClose,
   student,
+  actorRole,
+  managedDepartmentId,
   onSuccess,
 }: {
   open: boolean;
   onClose: () => void;
   student: Student | null;
+  actorRole: "admin" | "department_admin";
+  managedDepartmentId: string | null;
   onSuccess: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -410,12 +436,15 @@ function StudentFormModal({
       year_of_study: 1,
       academic_year: "2025-2026",
       role: "STUDENT",
+      managed_department_id: null,
     },
   });
 
   const departmentId = watch("department_id");
   const academicPlanId = watch("academic_plan_id");
   const yearOfStudy = watch("year_of_study");
+  const selectedRole = watch("role");
+  const managedDeptId = watch("managed_department_id");
 
   useEffect(() => {
     if (!open) return;
@@ -439,7 +468,8 @@ function StudentFormModal({
         specialization_id: student.specialization_id || null,
         year_of_study: student.year_of_study || 1,
         academic_year: student.academic_year || "2025-2026",
-        role: student.role || "STUDENT",
+        role: (student.role || "STUDENT") as StudentFormData["role"],
+        managed_department_id: student.managed_department_id || null,
       });
     } else {
       reset({
@@ -452,20 +482,29 @@ function StudentFormModal({
         year_of_study: 1,
         academic_year: "2025-2026",
         role: "STUDENT",
+        managed_department_id: null,
       });
     }
   }, [student, open, reset]);
 
   // Once departments finish loading, back-fill department_id for an
-  // existing student from their already-known academic_plan_id.
+  // existing student from their already-known academic_plan_id,
+  // or lock it to the actor's own managed department.
   useEffect(() => {
-    if (student?.academic_plan_id && departments.length > 0) {
+    if (departments.length === 0) return;
+
+    if (actorRole === "department_admin" && managedDepartmentId) {
+      setValue("department_id", managedDepartmentId);
+      return;
+    }
+
+    if (student?.academic_plan_id) {
       const owningDept = departments.find((d) =>
         d.academic_plans.some((p) => p.id === student.academic_plan_id)
       );
       if (owningDept) setValue("department_id", owningDept.id);
     }
-  }, [departments, student, setValue]);
+  }, [departments, student, setValue, actorRole, managedDepartmentId]);
 
   const selectedDepartment = useMemo(
     () => departments.find((d) => d.id === departmentId),
@@ -563,7 +602,14 @@ function StudentFormModal({
                 name="department_id"
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} disabled={optionsLoading || departments.length === 0}>
+                  <Select
+                    {...field}
+                    disabled={
+                      optionsLoading ||
+                      departments.length === 0 ||
+                      actorRole === "department_admin"
+                    }
+                  >
                     <option value="">
                       {optionsLoading ? "Loading…" : "Select Department"}
                     </option>
@@ -578,6 +624,11 @@ function StudentFormModal({
               {!optionsLoading && departments.length === 0 && !optionsError && (
                 <p className="text-xs text-muted-foreground">
                   No departments yet — add one in Academic Structure first.
+                </p>
+              )}
+              {actorRole === "department_admin" && (
+                <p className="text-[11px] text-muted-foreground">
+                  Locked to your department.
                 </p>
               )}
               {errors.department_id && <p className="text-xs text-destructive">{errors.department_id.message}</p>}
@@ -662,6 +713,60 @@ function StudentFormModal({
                 />
                 {errors.specialization_id && (
                   <p className="text-xs text-destructive">{errors.specialization_id.message}</p>
+                )}
+              </div>
+            )}
+
+            {/* Role management — only for general admin editing existing users */}
+            {actorRole === "admin" && student && (
+              <div className="space-y-3 p-3 border border-border rounded-lg bg-muted/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium text-foreground">Role Management</span>
+                  <span className="text-[10px] text-muted-foreground">Admin only</span>
+                </div>
+
+                <div className="space-y-1">
+                  <Label>User Role</Label>
+                  <select
+                    {...register("role")}
+                    className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
+                  >
+                    <option value="STUDENT">Student</option>
+                    <option value="DEPARTMENT_ADMIN">Department Admin</option>
+                    <option value="ADMIN">General Admin</option>
+                  </select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Department admins can manage students, courses, and announcements for their department only.
+                  </p>
+                </div>
+
+                {selectedRole === "DEPARTMENT_ADMIN" && (
+                  <div className="space-y-1">
+                    <Label>Managed Department *</Label>
+                    <select
+                      {...register("managed_department_id")}
+                      className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
+                    >
+                      <option value="">Select Department to Manage</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-muted-foreground">
+                      This user will be able to manage students, courses, and announcements in this department only.
+                    </p>
+                    {errors.managed_department_id && (
+                      <p className="text-xs text-destructive">{errors.managed_department_id.message as string}</p>
+                    )}
+                  </div>
+                )}
+
+                {selectedRole === "ADMIN" && (
+                  <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                    ⚠ General admins have full access to ALL departments and can manage all users. Only assign this role to trusted accounts.
+                  </p>
                 )}
               </div>
             )}

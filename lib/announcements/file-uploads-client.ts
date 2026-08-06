@@ -34,7 +34,7 @@ export async function uploadAnnouncementCoverClient(
 
     if (error) throw error;
 
-    // Get public URL
+    // Get public URL (bucket is public, so this works)
     const { data: urlData } = supabase.storage
       .from("announcement-covers")
       .getPublicUrl(data.path);
@@ -112,7 +112,7 @@ export async function uploadAnnouncementAttachmentClient(
 
     if (storageError) throw storageError;
 
-    // Get public URL
+    // Get public URL (bucket is public, so this works)
     const { data: urlData } = supabase.storage
       .from("announcement-attachments")
       .getPublicUrl(storageData.path);

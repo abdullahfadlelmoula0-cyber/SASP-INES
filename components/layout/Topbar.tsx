@@ -20,7 +20,7 @@ export function Topbar() {
 
   const initials = profile ? getInitials(profile.full_name) : "?";
   const displayName = profile?.full_name ?? "Student";
-  const roleDisplay = profile?.role === "admin" ? "Administrator" : profile?.department ?? "Student";
+  const roleDisplay = profile?.role === "admin" ? "Administrator" : profile?.role === "department_admin" ? "Department Admin" : profile?.department ?? "Student";
   const emailDisplay = profile?.university_email ?? "";
 
   async function handleSignOut() {
@@ -81,12 +81,12 @@ export function Topbar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <a href={profile?.role === "admin" ? "/admin" : "/profile"} className="cursor-pointer">
+              <a href={profile?.role === "admin" || profile?.role === "department_admin" ? "/admin" : "/profile"} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </a>
             </DropdownMenuItem>
-            {profile?.role === "admin" && (
+            {(profile?.role === "admin" || profile?.role === "department_admin") && (
               <DropdownMenuItem asChild>
                 <a href="/admin/settings" className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />

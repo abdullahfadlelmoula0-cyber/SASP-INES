@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
 import { createClient } from "@/lib/supabase/server";
 import {
   Users,
@@ -41,27 +41,43 @@ function getDeliveryStatus(course: Course): "scheduled" | "in_progress" | "compl
 }
 
 export default async function AdminDashboardPage() {
-  const admin = await requireAdmin();
+  const admin = await requireAdminOrDepartmentAdmin();
   const supabase = await createClient();
 
-  // ── Fetch all stats concurrently ─────────────────────────────────
+  const isDeptAdmin = admin.role === "department_admin";
+  const deptId = isDeptAdmin ? admin.managed_department_id : null;
+
+  // Build scoped queries — department admins only see their department's data
+  let studentsQuery = supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "student");
+
+  let coursesQuery = supabase
+    .from("courses")
+    .select("*", { count: "exact", head: true });
+
+  let recentCoursesQuery = supabase
+    .from("courses")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  // Scope queries for department admins
+  if (isDeptAdmin && deptId) {
+    studentsQuery = studentsQuery.eq("academic_plans.department_id", deptId);
+    coursesQuery = coursesQuery.eq("academic_plans.department_id", deptId);
+    recentCoursesQuery = recentCoursesQuery.eq("academic_plans.department_id", deptId);
+  }
+
   const [
     { count: studentsCount },
     { count: totalCoursesCount },
     { data: recentCourses },
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("role", "student"),
-    supabase
-      .from("courses")
-      .select("*", { count: "exact", head: true }),
-    supabase
-      .from("courses")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(6),
+    studentsQuery,
+    coursesQuery,
+    recentCoursesQuery,
   ]);
 
   const firstName = admin.full_name.split(" ")[0] || "Admin";

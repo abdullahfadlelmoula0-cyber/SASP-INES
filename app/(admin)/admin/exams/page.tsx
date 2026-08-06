@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FileText, Upload } from "lucide-react";
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminExamsPage() {
-  await requireAdmin();
+  await requireAdminOrDepartmentAdmin();
 
   return (
     <div className="space-y-8">
