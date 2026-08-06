@@ -3,25 +3,21 @@ import { requireAuth } from "@/lib/auth/requireAuth";
 import type { UserProfile } from "@/types";
 
 /**
- * Server-side guard — requires an authenticated admin user.
+ * Server-side guard — requires a full (general) admin. department_admin
+ * accounts are intentionally NOT allowed through here — they only have
+ * access to the announcements page/actions via
+ * requireAdminOrDepartmentAdmin(). Every other admin surface (courses,
+ * students, academic structure, settings) stays admin-only.
  *
- * Use at the top of any admin-only Server Component or layout.
  * - Unauthenticated users → redirected to /login.
- * - Authenticated non-admins → redirected to /dashboard (forbidden).
- * - Admins → profile is returned so the component can use it.
- *
- * IMPORTANT: This check is done server-side using the user's profile
- * role from the database. It does NOT rely on client-side state or
- * hidden UI elements. Hiding links is a UX improvement only.
- *
- * @returns The authenticated admin's profile (never null).
+ * - Students / department_admin → redirected to /dashboard (forbidden).
+ * - Admin → profile is returned so the component can use it.
  */
 export async function requireAdmin(): Promise<UserProfile> {
   // requireAuth handles the unauthenticated redirect
   const profile = await requireAuth();
 
   if (profile.role !== "admin") {
-    // Authenticated but not an admin — send to dashboard (not login)
     redirect("/dashboard");
   }
 

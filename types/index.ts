@@ -10,7 +10,7 @@
  * Only admins can change a user's role — students cannot self-promote
  * (enforced by RLS at the database level).
  */
-export type UserRole = "student" | "admin";
+export type UserRole = "student" | "admin" | "department_admin";
 
 /**
  * Mirrors the `public.profiles` table in Supabase.
@@ -56,6 +56,12 @@ export interface UserProfile {
    * Null for shared-trunk years or legacy-path students.
    */
   specialization_id: string | null;
+  /**
+   * Only meaningful when role = 'department_admin'. FK → departments.id.
+   * The single department this admin may post announcements for.
+   * Null for students/admins.
+   */
+  managed_department_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -223,13 +229,24 @@ export interface Document extends Partial<AcademicTarget> {
 // ── Announcements ────────────────────────────────────────────────
 
 /**
- * Stub for the future announcements table.
+ * Platform-wide announcements with optional academic targeting.
  * Uses Partial<AcademicTarget> for the same nullable targeting model
  * as Documents. NULL = no restriction on that dimension.
  *
  * NOTE: No `semester` field.
  */
 export type AnnouncementPriority = "low" | "normal" | "high" | "urgent";
+
+export interface AnnouncementAttachment {
+  id: string;
+  announcement_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size_bytes: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
 
 export interface Announcement extends Partial<AcademicTarget> {
   id: string;
@@ -240,8 +257,11 @@ export interface Announcement extends Partial<AcademicTarget> {
   author?: Pick<UserProfile, "full_name" | "avatar_url">;
   is_pinned: boolean;
   expires_at: string | null;
+  cover_image_url: string | null;
   created_at: string;
   updated_at: string;
+  // Joined attachments
+  announcement_attachments?: AnnouncementAttachment[];
 }
 
 // ── Pagination ───────────────────────────────────────────────────
