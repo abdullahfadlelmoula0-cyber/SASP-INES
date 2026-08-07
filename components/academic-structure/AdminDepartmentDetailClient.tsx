@@ -15,6 +15,7 @@ import {
   BookOpen,
   Layers,
   GraduationCap,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ import { AddPlanModal, EditPlanModal } from "@/components/academic-structure/Pla
 import { AddSpecializationModal, EditSpecializationModal } from "@/components/academic-structure/SpecializationModals";
 import { AddPlanCourseModal, EditPlanCourseModal } from "@/components/academic-structure/PlanCourseModals";
 import { ConfirmDeleteDialog } from "@/components/academic-structure/ConfirmDeleteDialog";
+import { CourseDetails } from "@/components/courses/CourseDetails";
 
 export function AdminDepartmentDetailClient({ departmentId }: { departmentId: string }) {
   const [detail, setDetail] = useState<DepartmentDetail | null>(null);
@@ -63,6 +65,7 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
   const [addCourseOpen, setAddCourseOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
+  const [materialsCourse, setMaterialsCourse] = useState<Course | null>(null);
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
@@ -365,10 +368,17 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
                           <tr key={course.id} className="hover:bg-muted/20 transition-colors">
                             <td className="px-4 py-3 font-mono text-xs">{course.code}</td>
                             <td className="px-4 py-3">
-                              <p className="font-medium text-foreground">{course.title}</p>
-                              {course.instructor && (
-                                <p className="text-xs text-muted-foreground">{course.instructor}</p>
-                              )}
+                              <button
+                                onClick={() => setMaterialsCourse(course)}
+                                className="text-left group"
+                              >
+                                <p className="font-medium text-foreground group-hover:text-primary group-hover:underline transition-colors">
+                                  {course.title}
+                                </p>
+                                {course.instructor && (
+                                  <p className="text-xs text-muted-foreground">{course.instructor}</p>
+                                )}
+                              </button>
                             </td>
                             <td className="px-4 py-3">{course.credits}</td>
                             <td className="px-4 py-3">
@@ -384,6 +394,10 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => setMaterialsCourse(course)}>
+                                    <FolderOpen className="w-4 h-4" />
+                                    Manage Materials
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => setEditingCourse(course)}>
                                     <Pencil className="w-4 h-4" />
                                     Edit
@@ -476,6 +490,27 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
         description={<>This removes <strong>{deletingCourse?.code}</strong> permanently.</>}
         onConfirm={() => deletePlanCourse(deletingCourse!.id, departmentId)}
         onSuccess={onRefresh}
+      />
+
+      <CourseDetails
+        course={materialsCourse}
+        open={!!materialsCourse}
+        onOpenChange={(v) => !v && setMaterialsCourse(null)}
+        variant="admin"
+        actions={
+          materialsCourse ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingCourse(materialsCourse);
+                setMaterialsCourse(null);
+              }}
+            >
+              <Pencil className="w-4 h-4" />
+              Edit Course
+            </Button>
+          ) : null
+        }
       />
     </div>
   );
