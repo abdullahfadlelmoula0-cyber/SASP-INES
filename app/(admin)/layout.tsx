@@ -34,7 +34,7 @@ export default async function AdminLayout({
     .select("*", { count: "exact", head: true });
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background">
       <Sidebar courseCount={courseCount ?? undefined} />
 
       <div className="flex flex-col flex-1 overflow-hidden">
