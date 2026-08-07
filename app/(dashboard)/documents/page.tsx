@@ -1,26 +1,8 @@
-import type { Metadata } from "next";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { FolderOpen } from "lucide-react";
+// Save as: app/(dashboard)/documents/page.tsx
+// This standalone page is retired — documents now live inside each
+// course's detail page (Documents/Exams tabs). Redirect any old links.
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Documents",
-  description: "Access academic documents, syllabi, and forms.",
-};
-
-export default function DocumentsPage() {
-  return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Documents"
-        description="Access lecture notes, syllabi, handbooks, and official forms."
-      />
-
-      <EmptyState
-        icon={FolderOpen}
-        title="No documents yet"
-        description="Academic documents will appear here once uploaded by administrators."
-      />
-    </div>
-  );
+export default function DocumentsPageRedirect() {
+  redirect("/courses");
 }

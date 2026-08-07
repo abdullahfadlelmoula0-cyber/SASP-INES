@@ -24,30 +24,21 @@ import { useUser } from "@/hooks/useUser";
 const studentNavItems = [
   { href: "/dashboard",      label: "Dashboard",      icon: LayoutDashboard },
   { href: "/profile",        label: "My Profile",     icon: User },
-  { href: "/courses",        label: "Courses",        icon: BookOpen }, // تأكد من وجود هذا السطر
-  { href: "/exams",          label: "Previous Exams", icon: FileText },
+  { href: "/courses",        label: "Courses",        icon: BookOpen },
   { href: "/announcements",  label: "Announcements",  icon: Bell },
   { href: "/settings",       label: "Settings",       icon: Settings },
 ];
 
 const adminNavItems = [
-  { href: "/admin",               label: "Dashboard",           icon: LayoutDashboard },
-  { href: "/admin/students",      label: "Students",            icon: Users },
-  { href: "/admin/courses",       label: "Courses",             icon: BookOpen },
-  { href: "/admin/announcements", label: "Announcements",       icon: Bell },
-  { href: "/admin/exams",         label: "Documents",           icon: FileText },
+  { href: "/admin",                    label: "Dashboard",           icon: LayoutDashboard },
+  { href: "/admin/students",           label: "Students",            icon: Users },
+  { href: "/admin/courses",            label: "Courses",             icon: BookOpen },
+  { href: "/admin/academic-structure", label: "Academic Structure",  icon: Building2 },
+  { href: "/admin/announcements",      label: "Announcements",       icon: Bell },
 ];
-
-// Department admin overrides: "Documents" → "Department" (links to academic structure)
-const deptAdminNavOverrides: { href: string; label: string; icon: ElementType } = {
-  href: "/admin/academic-structure",
-  label: "Department",
-  icon: Building2,
-};
 
 // General admin-only items
 const adminOnlyNavItems = [
-  { href: "/admin/academic-structure", label: "Academic Structure", icon: Building2 },
   { href: "/admin/graduation-ai", label: "Graduation AI", icon: GraduationCap },
   { href: "/admin/settings",      label: "Settings",            icon: Settings },
 ];
@@ -57,21 +48,21 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
   const router = useRouter();
   const { isAdmin, isGeneralAdmin, isDepartmentAdmin, profile, isLoading } = useUser();
 
-  // Build nav items for department admins: replace "Documents" AND
-  // "Courses" with links into their own academic-structure page — the
-  // legacy /admin/courses page writes plain department/program text and
-  // never sets academic_plan_id, so a department_admin's writes there
-  // would silently fail RLS (can_manage_plan requires a real plan id).
+  // Build nav items for department admins: "Courses" and "Academic
+  // Structure" both collapse into a single "My Department" link —
+  // that one page already covers courses, specializations, and
+  // materials for their department. The legacy /admin/courses page
+  // writes plain department/program text and never sets
+  // academic_plan_id, so a department_admin's writes there would
+  // silently fail RLS (can_manage_plan requires a real plan id).
   const effectiveAdminNavItems = isDepartmentAdmin && profile?.managed_department_id
-    ? adminNavItems.map((item) => {
-        if (item.href === "/admin/exams") {
-          return { ...deptAdminNavOverrides, href: `/admin/academic-structure/${profile.managed_department_id}` };
-        }
-        if (item.href === "/admin/courses") {
-          return { ...item, href: `/admin/academic-structure/${profile.managed_department_id}` };
-        }
-        return item;
-      })
+    ? adminNavItems
+        .filter((item) => item.href !== "/admin/courses")
+        .map((item) =>
+          item.href === "/admin/academic-structure"
+            ? { href: `/admin/academic-structure/${profile.managed_department_id}`, label: "My Department", icon: Building2 }
+            : item
+        )
     : adminNavItems;
 
   async function handleSignOut() {

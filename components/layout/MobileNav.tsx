@@ -7,31 +7,30 @@ import {
   LayoutDashboard,
   User,
   BookOpen,
-  FolderOpen,
+  Building2,
   Bell,
   Users,
   Settings,
-  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 
-// ── Student nav: 5 items (Exams removed — accessible inside course detail) ──
+// ── Student nav: 5 items (Exams/Documents removed — accessible inside course detail) ──
 const studentNavItems = [
-  { href: "/dashboard",     label: "Home",    icon: LayoutDashboard },
-  { href: "/courses",       label: "Courses", icon: BookOpen },
-  { href: "/documents",     label: "Docs",    icon: FolderOpen },
-  { href: "/announcements", label: "News",    icon: Bell },
-  { href: "/profile",       label: "Profile", icon: User },
+  { href: "/dashboard",     label: "Home",     icon: LayoutDashboard },
+  { href: "/courses",       label: "Courses",  icon: BookOpen },
+  { href: "/announcements", label: "News",     icon: Bell },
+  { href: "/profile",       label: "Profile",  icon: User },
+  { href: "/settings",      label: "Settings", icon: Settings },
 ];
 
 // ── Admin nav: 5 items ──────────────────────────────────────────
 const adminNavItems = [
-  { href: "/admin",           label: "Home",     icon: LayoutDashboard },
-  { href: "/admin/students",  label: "Students", icon: Users },
-  { href: "/admin/courses",   label: "Courses",  icon: BookOpen },
-  { href: "/admin/documents", label: "Docs",     icon: FolderOpen },
-  { href: "/admin/settings",  label: "Settings", icon: Settings },
+  { href: "/admin",                    label: "Home",     icon: LayoutDashboard },
+  { href: "/admin/students",           label: "Students", icon: Users },
+  { href: "/admin/courses",            label: "Courses",  icon: BookOpen },
+  { href: "/admin/academic-structure", label: "Structure", icon: Building2 },
+  { href: "/admin/settings",           label: "Settings", icon: Settings },
 ];
 
 /**
@@ -42,13 +41,13 @@ export function MobileNav() {
   const pathname = usePathname();
   const { isAdmin, isDepartmentAdmin, profile } = useUser();
 
-  // For department admins, replace "Docs" with a "Department" link to
-  // their own academic-structure page.
+  // For department admins, point "Structure" straight to their own
+  // academic-structure page instead of the cross-department index.
   const navItems = isAdmin
     ? isDepartmentAdmin && profile?.managed_department_id
       ? adminNavItems.map((item) =>
-          item.href === "/admin/documents"
-            ? { href: `/admin/academic-structure/${profile.managed_department_id}`, label: "Dept", icon: FolderOpen as ElementType }
+          item.href === "/admin/academic-structure"
+            ? { ...item, href: `/admin/academic-structure/${profile.managed_department_id}`, label: "Dept" }
             : item
         )
       : adminNavItems
