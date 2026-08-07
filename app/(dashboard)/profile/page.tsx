@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { createClient } from "@/lib/supabase/server";
-import { User, Mail, Hash, Calendar, BookOpen, Shield } from "lucide-react";
+import { User, Mail, Hash, Calendar, BookOpen, Shield, Settings as SettingsIcon, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -44,17 +45,16 @@ export default async function ProfilePage() {
   const programName = profileData?.program || "Computer Science";
   const academicYear = profileData?.academic_year || "2025-2026";
 
-  // 3. جلب إجمالي الكورسات المخصصة لقسم وسنة الطالب الحقيقيين من قاعدة البيانات مباشرة
+  // 3. إجمالي الكورسات المرئية فعليًا للطالب — نعتمد على نفس سياسة
+  // courses_select_student التي تعرض الكورسات فعليًا للطالب (النظام
+  // القديم النصي أو academic_plan_id/specialization_id/year_number) — بدل
+  // تكرار المنطق يدويًا هنا باستخدام العمود النصي department القديم
+  // الذي يعطي رقمًا أقل من الحقيقي للطلاب المنقولين للهيكل الجديد.
   let totalCourses = 0;
   try {
-    const studentDept = profileData?.department || programName;
-    const studentYear = profileData?.year_of_study || 1;
-
     const { count, error } = await supabase
       .from("courses")
-      .select("*", { count: "exact", head: true })
-      .eq("department", studentDept)
-      .eq("year_of_study", Number(studentYear));
+      .select("*", { count: "exact", head: true });
 
     if (!error && count !== null) {
       totalCourses = count;
@@ -69,6 +69,19 @@ export default async function ProfilePage() {
         title="My Profile"
         description="View and update your student information."
       />
+
+      {/* Quick link to Settings — kept here too so it's reachable on
+          mobile, where the bottom nav intentionally stays at 5 items. */}
+      <Link
+        href="/settings"
+        className="flex items-center justify-between p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors"
+      >
+        <span className="text-sm font-medium flex items-center gap-2">
+          <SettingsIcon className="w-4 h-4 text-primary" />
+          Settings, Appearance & Help
+        </span>
+        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* بطاقة معلومات الطالب المختصرة */}

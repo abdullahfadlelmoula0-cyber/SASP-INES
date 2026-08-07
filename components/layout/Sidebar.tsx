@@ -27,6 +27,7 @@ const studentNavItems = [
   { href: "/courses",        label: "Courses",        icon: BookOpen }, // تأكد من وجود هذا السطر
   { href: "/exams",          label: "Previous Exams", icon: FileText },
   { href: "/announcements",  label: "Announcements",  icon: Bell },
+  { href: "/settings",       label: "Settings",       icon: Settings },
 ];
 
 const adminNavItems = [
