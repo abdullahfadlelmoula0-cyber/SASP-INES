@@ -38,6 +38,8 @@ import {
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { fetchAllAdminCourses } from "@/lib/courses/course-mutations";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/hooks/useUser";
 import {
   getCourseDeliveryStatus,
   getDeliveryStatusLabel,
@@ -87,6 +89,22 @@ interface DeptNode {
 }
 
 export function AdminCoursesClient() {
+  const router = useRouter();
+  const { isDepartmentAdmin, profile } = useUser();
+
+  // "+ Add Course" no longer opens the legacy modal (it writes plain
+  // department/program text and never sets academic_plan_id, which
+  // silently fails RLS for department_admin and is inconsistent with
+  // the structured system for general admin too). Send the user to
+  // the real course manager instead.
+  function goToAddCourse() {
+    if (isDepartmentAdmin && profile?.managed_department_id) {
+      router.push(`/admin/academic-structure/${profile.managed_department_id}`);
+    } else {
+      router.push("/admin/academic-structure");
+    }
+  }
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -254,7 +272,7 @@ export function AdminCoursesClient() {
             </p>
           </div>
           <Button
-            onClick={() => setAddOpen(true)}
+            onClick={goToAddCourse}
             className="sm:self-start"
           >
             <Plus className="w-4 h-4" />
@@ -419,7 +437,7 @@ export function AdminCoursesClient() {
                 title="No courses yet"
                 description="Get started by adding your first course."
                 action={
-                  <Button size="sm" onClick={() => setAddOpen(true)}>
+                  <Button size="sm" onClick={goToAddCourse}>
                     <Plus className="w-4 h-4" />
                     Add your first course
                   </Button>

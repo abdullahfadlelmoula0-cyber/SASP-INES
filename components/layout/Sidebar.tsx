@@ -48,21 +48,18 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
   const router = useRouter();
   const { isAdmin, isGeneralAdmin, isDepartmentAdmin, profile, isLoading } = useUser();
 
-  // Build nav items for department admins: "Courses" and "Academic
-  // Structure" both collapse into a single "My Department" link —
-  // that one page already covers courses, specializations, and
-  // materials for their department. The legacy /admin/courses page
-  // writes plain department/program text and never sets
-  // academic_plan_id, so a department_admin's writes there would
-  // silently fail RLS (can_manage_plan requires a real plan id).
+  // Build nav items for department admins: keep "Courses" pointing to
+  // /admin/courses exactly like general admin (they can browse there,
+  // and the "+ Add Course" button on that page already redirects into
+  // their department correctly). Only "Academic Structure" itself gets
+  // pointed straight at their own department instead of the cross-
+  // department index.
   const effectiveAdminNavItems = isDepartmentAdmin && profile?.managed_department_id
-    ? adminNavItems
-        .filter((item) => item.href !== "/admin/courses")
-        .map((item) =>
-          item.href === "/admin/academic-structure"
-            ? { href: `/admin/academic-structure/${profile.managed_department_id}`, label: "My Department", icon: Building2 }
-            : item
-        )
+    ? adminNavItems.map((item) =>
+        item.href === "/admin/academic-structure"
+          ? { href: `/admin/academic-structure/${profile.managed_department_id}`, label: "My Department", icon: Building2 }
+          : item
+      )
     : adminNavItems;
 
   async function handleSignOut() {

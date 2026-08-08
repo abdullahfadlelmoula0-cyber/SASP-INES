@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, GraduationCap, LogOut, User, Settings } from "lucide-react";
+import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
 import { getInitials } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -22,6 +23,8 @@ export function Topbar() {
   const displayName = profile?.full_name ?? "Student";
   const roleDisplay = profile?.role === "admin" ? "Administrator" : profile?.role === "department_admin" ? "Department Admin" : profile?.department ?? "Student";
   const emailDisplay = profile?.university_email ?? "";
+  const isAdminRole = profile?.role === "admin" || profile?.role === "department_admin";
+  const settingsHref = isAdminRole ? "/admin/settings" : "/settings";
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -49,6 +52,16 @@ export function Topbar() {
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-card" />
         </button>
+
+        {/* Direct, single-click settings shortcut — goes straight to the
+            right settings page based on role, no dropdown needed. */}
+        <Link
+          href={settingsHref}
+          aria-label="Settings"
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent/30 transition-colors"
+        >
+          <Settings className="w-5 h-5" />
+        </Link>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -81,19 +94,17 @@ export function Topbar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <a href={profile?.role === "admin" || profile?.role === "department_admin" ? "/admin" : "/profile"} className="cursor-pointer">
+              <Link href={isAdminRole ? "/admin" : "/profile"} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
-              </a>
+              </Link>
             </DropdownMenuItem>
-            {(profile?.role === "admin" || profile?.role === "department_admin") && (
-              <DropdownMenuItem asChild>
-                <a href="/admin/settings" className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </a>
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem asChild>
+              <Link href={settingsHref} className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-rose-500 focus:text-rose-500 cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
