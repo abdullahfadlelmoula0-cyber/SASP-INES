@@ -12,14 +12,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "SASP-INES | Sudanese Students Academic Support Platform",
+    default: "SASP-INES | Smart Academic Support Platform",
     template: "%s | SASP-INES",
   },
   description:
-    "The official academic support platform for Sudanese students studying at INES-Ruhengeri, Rwanda. Access courses, exams, documents, and announcements.",
+    "The official academic support platform for students at INES-Ruhengeri, Rwanda. Access courses, exams, documents, and announcements.",
   keywords: [
     "INES Ruhengeri",
-    "Sudanese students",
+    "Smart Academic Support Platform",
     "Rwanda university",
     "academic platform",
     "SASP-INES",

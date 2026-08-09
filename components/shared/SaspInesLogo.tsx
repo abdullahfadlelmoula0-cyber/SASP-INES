@@ -17,10 +17,13 @@ interface SaspInesLogoProps {
 /**
  * SASP-INES Official Logo.
  *
- * Renders the official brand artwork (public/logo.png), which already
- * includes the arch, torch, globe, book, and the
- * "Sudanese Academic Support Platform / SASP-INES" wordmark baked into
- * the image itself.
+ * Renders two transparent-background versions of the brand artwork and
+ * lets CSS pick the right one for the active theme (no JS/hook needed,
+ * so there's no flash while the theme resolves on load):
+ *   - public/logo-light.png — original colors, for light backgrounds
+ *   - public/logo-dark.png  — navy elements recolored to white, for
+ *     dark backgrounds (the teal/blue "S" swoosh is unchanged — it
+ *     already reads fine on dark backgrounds)
  *
  * Pass `className` (e.g. "w-80 h-auto") to control rendered size.
  */
@@ -29,13 +32,23 @@ export function SaspInesLogo({
   priority = false,
 }: SaspInesLogoProps) {
   return (
-    <Image
-      src="/logo.png"
-      alt="SASP-INES Logo"
-      width={640}
-      height={640}
-      className={className}
-      priority={priority}
-    />
+    <>
+      <Image
+        src="/logo-light.png"
+        alt="SASP-INES Logo"
+        width={640}
+        height={640}
+        className={`${className} dark:hidden`}
+        priority={priority}
+      />
+      <Image
+        src="/logo-dark.png"
+        alt="SASP-INES Logo"
+        width={640}
+        height={640}
+        className={`${className} hidden dark:block`}
+        priority={priority}
+      />
+    </>
   );
 }
