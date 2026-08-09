@@ -51,7 +51,7 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
   // Build nav items for department admins: keep "Courses" pointing to
   // /admin/courses exactly like general admin (they can browse there,
   // and the "+ Add Course" button on that page already redirects into
-  // their department correctly). Only "Academic Structure" itself gets
+  // their department correctly). "Academic Structure" itself gets
   // pointed straight at their own department instead of the cross-
   // department index.
   const effectiveAdminNavItems = isDepartmentAdmin && profile?.managed_department_id
@@ -61,6 +61,13 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
           : item
       )
     : adminNavItems;
+
+  // /admin/settings is general-admin-only (system-wide settings), so
+  // department admins get the general /settings page instead (Appearance,
+  // FAQ, account) — same page students use, no role restriction on it.
+  const settingsNavItem = isDepartmentAdmin
+    ? { href: "/settings", label: "Settings", icon: Settings }
+    : null;
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -151,6 +158,8 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
                 {...item}
               />
             ))}
+            {/* Department admin: general /settings (not /admin/settings) */}
+            {settingsNavItem && <NavItem {...settingsNavItem} />}
           </div>
         ) : (
           // Student account: show only the student menu.

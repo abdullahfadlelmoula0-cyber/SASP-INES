@@ -47,28 +47,27 @@ export default async function AdminDashboardPage() {
   const isDeptAdmin = admin.role === "department_admin";
   const deptId = isDeptAdmin ? admin.managed_department_id : null;
 
-  // Build scoped queries — department admins only see their department's data
-  let studentsQuery = supabase
+  // Build scoped queries — RLS (courses_select_department_admin /
+  // profiles_select_department_admin) already restricts rows to the
+  // department_admin's own department automatically. No manual
+  // .eq("academic_plans.department_id", ...) filter is needed — that
+  // pattern requires academic_plans to be embedded in .select() to
+  // work at all, and was causing a 400 error on every load for
+  // department_admin (this WAS the "flicker and bounce home" bug).
+  const studentsQuery = supabase
     .from("profiles")
     .select("*", { count: "exact", head: true })
     .eq("role", "student");
 
-  let coursesQuery = supabase
+  const coursesQuery = supabase
     .from("courses")
     .select("*", { count: "exact", head: true });
 
-  let recentCoursesQuery = supabase
+  const recentCoursesQuery = supabase
     .from("courses")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(6);
-
-  // Scope queries for department admins
-  if (isDeptAdmin && deptId) {
-    studentsQuery = studentsQuery.eq("academic_plans.department_id", deptId);
-    coursesQuery = coursesQuery.eq("academic_plans.department_id", deptId);
-    recentCoursesQuery = recentCoursesQuery.eq("academic_plans.department_id", deptId);
-  }
 
   const [
     { count: studentsCount },

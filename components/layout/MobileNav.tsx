@@ -41,15 +41,25 @@ export function MobileNav() {
   const pathname = usePathname();
   const { isAdmin, isDepartmentAdmin, profile } = useUser();
 
-  // For department admins, point "Structure" straight to their own
-  // academic-structure page instead of the cross-department index.
+  // For department admins:
+  //  - "Structure" points straight to their own academic-structure page
+  //    instead of the cross-department index.
+  //  - "Settings" points to the general /settings page (Appearance, FAQ,
+  //    account) instead of /admin/settings — that page is guarded by
+  //    requireAdmin() (general admin only, system-wide settings), so a
+  //    department_admin landing there gets redirected away instantly.
+  //    /settings has no role restriction, so it works for them too.
   const navItems = isAdmin
     ? isDepartmentAdmin && profile?.managed_department_id
-      ? adminNavItems.map((item) =>
-          item.href === "/admin/academic-structure"
-            ? { ...item, href: `/admin/academic-structure/${profile.managed_department_id}`, label: "Dept" }
-            : item
-        )
+      ? adminNavItems.map((item) => {
+          if (item.href === "/admin/academic-structure") {
+            return { ...item, href: `/admin/academic-structure/${profile.managed_department_id}`, label: "Dept" };
+          }
+          if (item.href === "/admin/settings") {
+            return { ...item, href: "/settings" };
+          }
+          return item;
+        })
       : adminNavItems
     : studentNavItems;
 

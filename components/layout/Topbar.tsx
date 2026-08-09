@@ -24,7 +24,11 @@ export function Topbar() {
   const roleDisplay = profile?.role === "admin" ? "Administrator" : profile?.role === "department_admin" ? "Department Admin" : profile?.department ?? "Student";
   const emailDisplay = profile?.university_email ?? "";
   const isAdminRole = profile?.role === "admin" || profile?.role === "department_admin";
-  const settingsHref = isAdminRole ? "/admin/settings" : "/settings";
+  // /admin/settings is general-admin-only (system-wide settings). A
+  // department_admin gets redirected away from it instantly, so they use
+  // the general /settings page instead (same one students use —
+  // Appearance, FAQ, account — no role restriction on it).
+  const settingsHref = profile?.role === "admin" ? "/admin/settings" : "/settings";
 
   async function handleSignOut() {
     const supabase = createClient();
