@@ -200,6 +200,32 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
         plan && (
           <>
             {/* ── Plan settings ─────────────────────────────────── */}
+            {detail.plans.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-1">
+                  Plan:
+                </span>
+                {detail.plans.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPlanId(p.id)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
+                      plan.id === p.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:bg-accent/30"
+                    )}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+                <Button variant="ghost" size="sm" onClick={() => setAddPlanOpen(true)}>
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Plan
+                </Button>
+              </div>
+            )}
+
             <Card className="shadow-sm">
               <CardHeader className="flex-row items-start justify-between gap-2 pb-3">
                 <div className="flex items-center gap-2.5">
@@ -215,9 +241,24 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Badge variant={plan.is_active ? "success" : "muted"}>{plan.is_active ? "Active" : "Hidden"}</Badge>
+                  {detail.plans.length === 1 && (
+                    <Button variant="outline" size="sm" onClick={() => setAddPlanOpen(true)}>
+                      <Plus className="w-3.5 h-3.5" />
+                      Add Plan
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => setEditingPlan(plan)}>
                     <Pencil className="w-3.5 h-3.5" />
                     Edit Plan
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeletingPlan(plan)}
+                    aria-label="Delete plan"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </CardHeader>
@@ -428,7 +469,14 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
         open={!!deletingPlan}
         setOpen={(v) => !v && setDeletingPlan(null)}
         title="Delete this plan?"
-        description={<>This removes <strong>{deletingPlan?.name}</strong> and requires its specializations/courses to be removed first.</>}
+        description={
+          <>
+            This permanently deletes <strong>{deletingPlan?.name}</strong> and ALL of its
+            specializations. Any courses currently using this plan are not deleted, but
+            are disconnected from it and will immediately stop being visible to students
+            until reassigned to another plan.
+          </>
+        }
         onConfirm={() => deleteAcademicPlan(deletingPlan!.id, departmentId)}
         onSuccess={onRefresh}
       />
