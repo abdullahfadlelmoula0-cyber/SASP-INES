@@ -24,6 +24,7 @@ export function Topbar() {
   const roleDisplay = profile?.role === "admin" ? "Administrator" : profile?.role === "department_admin" ? "Department Admin" : profile?.department ?? "Student";
   const emailDisplay = profile?.university_email ?? "";
   const isAdminRole = profile?.role === "admin" || profile?.role === "department_admin";
+  const announcementsHref = isAdminRole ? "/admin/announcements" : "/announcements";
   // /admin/settings is general-admin-only (system-wide settings). A
   // department_admin gets redirected away from it instantly, so they use
   // the general /settings page instead (same one students use —
@@ -49,13 +50,14 @@ export function Topbar() {
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-3">
-        <button
+        <Link
+          href={announcementsHref}
           aria-label="Notifications"
           className="relative w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent/30 transition-colors"
         >
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-card" />
-        </button>
+        </Link>
 
         {/* Direct, single-click settings shortcut — goes straight to the
             right settings page based on role, no dropdown needed. */}
