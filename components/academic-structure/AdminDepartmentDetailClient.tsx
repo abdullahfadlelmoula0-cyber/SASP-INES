@@ -38,6 +38,7 @@ import type {
 } from "@/types/academic-structure";
 import { fetchDepartmentDetail, fetchPlanYearCourses } from "@/lib/academic-structure/queries";
 import { deleteAcademicPlan, deleteSpecialization, deletePlanCourse } from "@/lib/academic-structure/actions";
+import { createClient } from "@/lib/supabase/client";
 import { AddPlanModal, EditPlanModal } from "@/components/academic-structure/PlanModals";
 import { AddSpecializationModal, EditSpecializationModal } from "@/components/academic-structure/SpecializationModals";
 import { AddPlanCourseModal, EditPlanCourseModal } from "@/components/academic-structure/PlanCourseModals";
@@ -57,6 +58,8 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
   const [addPlanOpen, setAddPlanOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<AcademicPlanWithSpecializations | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<AcademicPlanWithSpecializations | null>(null);
+  const [planDeleteImpact, setPlanDeleteImpact] = useState<{ courses: number; documents: number; exams: number } | null>(null);
+  const [planDeleteImpactLoading, setPlanDeleteImpactLoading] = useState(false);
 
   const [addSpecOpen, setAddSpecOpen] = useState(false);
   const [editingSpec, setEditingSpec] = useState<Specialization | null>(null);
@@ -149,6 +152,39 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
     void loadCourses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan?.id, selectedYear, selectedSpecId, reloadKey]);
+
+  // Fetch the REAL number of courses/documents/exams a plan deletion
+  // would disconnect, so the confirm dialog can show concrete numbers
+  // instead of a vague "any courses" warning.
+  useEffect(() => {
+    if (!deletingPlan) {
+      setPlanDeleteImpact(null);
+      return;
+    }
+    setPlanDeleteImpactLoading(true);
+    (async () => {
+      const supabase = createClient();
+      const { data: planCourses } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("academic_plan_id", deletingPlan.id);
+      const courseIds = (planCourses ?? []).map((c) => c.id);
+
+      let documents = 0;
+      let exams = 0;
+      if (courseIds.length > 0) {
+        const [{ count: docCount }, { count: examCount }] = await Promise.all([
+          supabase.from("documents").select("id", { count: "exact", head: true }).in("course_id", courseIds),
+          supabase.from("exams").select("id", { count: "exact", head: true }).in("course_id", courseIds),
+        ]);
+        documents = docCount ?? 0;
+        exams = examCount ?? 0;
+      }
+
+      setPlanDeleteImpact({ courses: courseIds.length, documents, exams });
+      setPlanDeleteImpactLoading(false);
+    })();
+  }, [deletingPlan]);
 
   if (loading) return <LoadingSpinner size="lg" label="Loading department…" />;
 
@@ -471,10 +507,22 @@ export function AdminDepartmentDetailClient({ departmentId }: { departmentId: st
         title="Delete this plan?"
         description={
           <>
-            This permanently deletes <strong>{deletingPlan?.name}</strong> and ALL of its
-            specializations. Any courses currently using this plan are not deleted, but
-            are disconnected from it and will immediately stop being visible to students
-            until reassigned to another plan.
+            This permanently deletes <strong>{deletingPlan?.name}</strong> and{" "}
+            <strong>{deletingPlan?.specializations.length ?? 0} specialization(s)</strong> along with it.
+            <br /><br />
+            {planDeleteImpactLoading ? (
+              "Checking how many courses and materials will be affected…"
+            ) : planDeleteImpact && planDeleteImpact.courses > 0 ? (
+              <>
+                It will also disconnect <strong>{planDeleteImpact.courses} course(s)</strong> currently
+                using this plan — along with <strong>{planDeleteImpact.documents} document(s)</strong> and{" "}
+                <strong>{planDeleteImpact.exams} exam/assignment file(s)</strong> attached to those courses.
+                None of these are deleted, but all of them will immediately stop being visible to
+                students until the affected courses are reassigned to another plan.
+              </>
+            ) : (
+              "No courses currently use this plan, so nothing else will be affected."
+            )}
           </>
         }
         onConfirm={() => deleteAcademicPlan(deletingPlan!.id, departmentId)}
