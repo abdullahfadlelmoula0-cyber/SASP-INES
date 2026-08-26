@@ -59,6 +59,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/courses") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/announcements") ||
+    pathname.startsWith("/graduation-project") ||
+    pathname.startsWith("/supervision-requests") ||
     pathname.startsWith("/admin");
 
   // Unauthenticated user trying to access a protected page → redirect to login

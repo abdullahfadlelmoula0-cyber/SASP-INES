@@ -35,6 +35,8 @@ interface UseUserReturn {
   isGeneralAdmin: boolean;
   /** Convenience: true only for department_admin */
   isDepartmentAdmin: boolean;
+  /** Convenience: true only for lecturer */
+  isLecturer: boolean;
   /** Full discriminated auth state — prefer this for new code */
   authState: AuthState;
 }
@@ -131,6 +133,9 @@ export function useUser(): UseUserReturn {
     isDepartmentAdmin:
       authState.status === "authenticated" &&
       authState.profile.role === "department_admin",
+    isLecturer:
+      authState.status === "authenticated" &&
+      authState.profile.role === "lecturer",
     authState,
   };
 }

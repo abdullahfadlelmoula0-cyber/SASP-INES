@@ -11,11 +11,14 @@ import {
   Bell,
   Users,
   Settings,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 
-// ── Student nav: 5 items (Exams/Documents removed — accessible inside course detail) ──
+// ── Student nav: 5 items ──────────────────────────────────────────
+// Graduation Project accessible from the desktop sidebar; mobile nav
+// stays at 5 items per the established pattern.
 const studentNavItems = [
   { href: "/dashboard",     label: "Home",     icon: LayoutDashboard },
   { href: "/courses",       label: "Courses",  icon: BookOpen },
@@ -24,7 +27,15 @@ const studentNavItems = [
   { href: "/settings",      label: "Settings", icon: Settings },
 ];
 
-// ── Admin nav: 5 items ──────────────────────────────────────────
+// ── Lecturer nav: 4 items (under the 5-item limit) ────────────────
+const lecturerNavItems = [
+  { href: "/dashboard",            label: "Home",       icon: LayoutDashboard },
+  { href: "/supervision-requests", label: "Requests",   icon: ClipboardList },
+  { href: "/profile",              label: "Profile",    icon: User },
+  { href: "/settings",             label: "Settings",   icon: Settings },
+];
+
+// ── Admin nav: 5 items ───────────────────────────────────────────
 const adminNavItems = [
   { href: "/admin",                    label: "Home",     icon: LayoutDashboard },
   { href: "/admin/students",           label: "Students", icon: Users },
@@ -35,33 +46,36 @@ const adminNavItems = [
 
 /**
  * Mobile bottom navigation bar — visible only on small screens (md:hidden).
- * 5 items, pill-style active indicator, 48px min-height tap targets.
+ * 5 items max, pill-style active indicator, 48px min-height tap targets.
  */
 export function MobileNav() {
   const pathname = usePathname();
-  const { isAdmin, isDepartmentAdmin, profile } = useUser();
+  const { isAdmin, isDepartmentAdmin, isLecturer, profile } = useUser();
 
-  // For department admins:
-  //  - "Structure" points straight to their own academic-structure page
-  //    instead of the cross-department index.
-  //  - "Settings" points to the general /settings page (Appearance, FAQ,
-  //    account) instead of /admin/settings — that page is guarded by
-  //    requireAdmin() (general admin only, system-wide settings), so a
-  //    department_admin landing there gets redirected away instantly.
-  //    /settings has no role restriction, so it works for them too.
-  const navItems = isAdmin
-    ? isDepartmentAdmin && profile?.managed_department_id
-      ? adminNavItems.map((item) => {
-          if (item.href === "/admin/academic-structure") {
-            return { ...item, href: `/admin/academic-structure/${profile.managed_department_id}`, label: "Dept" };
-          }
-          if (item.href === "/admin/settings") {
-            return { ...item, href: "/settings" };
-          }
-          return item;
-        })
-      : adminNavItems
-    : studentNavItems;
+  // Resolve the correct nav array for the current role
+  let navItems = studentNavItems;
+
+  if (isAdmin) {
+    // For department admins: fix Structure href + Settings href
+    navItems =
+      isDepartmentAdmin && profile?.managed_department_id
+        ? adminNavItems.map((item) => {
+            if (item.href === "/admin/academic-structure") {
+              return {
+                ...item,
+                href: `/admin/academic-structure/${profile.managed_department_id}`,
+                label: "Dept",
+              };
+            }
+            if (item.href === "/admin/settings") {
+              return { ...item, href: "/settings" };
+            }
+            return item;
+          })
+        : adminNavItems;
+  } else if (isLecturer) {
+    navItems = lecturerNavItems;
+  }
 
   return (
     <nav

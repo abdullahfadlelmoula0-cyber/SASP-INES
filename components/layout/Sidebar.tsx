@@ -1,6 +1,7 @@
 "use client";
 
 import type { ElementType } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,56 +16,173 @@ import {
   Shield,
   Users,
   Building2,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
+import { getMaxYearsForProgram } from "@/lib/academic-config";
+
+// ── Nav item arrays ───────────────────────────────────────────────
 
 const studentNavItems = [
-  { href: "/dashboard",      label: "Dashboard",      icon: LayoutDashboard },
-  { href: "/profile",        label: "My Profile",     icon: User },
-  { href: "/courses",        label: "Courses",        icon: BookOpen },
-  { href: "/announcements",  label: "Announcements",  icon: Bell },
-  { href: "/settings",       label: "Settings",       icon: Settings },
+  { href: "/dashboard",          label: "Dashboard",          icon: LayoutDashboard },
+  { href: "/profile",            label: "My Profile",         icon: User },
+  { href: "/courses",            label: "Courses",            icon: BookOpen },
+  { href: "/graduation-project", label: "Graduation Project", icon: GraduationCap },
+  { href: "/announcements",      label: "Announcements",      icon: Bell },
+  { href: "/settings",           label: "Settings",           icon: Settings },
+];
+
+const lecturerNavItems = [
+  { href: "/dashboard",             label: "Dashboard",            icon: LayoutDashboard },
+  { href: "/supervision-requests",  label: "Supervision Requests", icon: ClipboardList },
+  { href: "/profile",               label: "Profile",              icon: User },
+  { href: "/settings",              label: "Settings",             icon: Settings },
 ];
 
 const adminNavItems = [
-  { href: "/admin",                    label: "Dashboard",           icon: LayoutDashboard },
-  { href: "/admin/students",           label: "Students",            icon: Users },
-  { href: "/admin/courses",            label: "Courses",             icon: BookOpen },
-  { href: "/admin/academic-structure", label: "Academic Structure",  icon: Building2 },
-  { href: "/admin/announcements",      label: "Announcements",       icon: Bell },
+  { href: "/admin",                    label: "Dashboard",          icon: LayoutDashboard },
+  { href: "/admin/students",           label: "Students",           icon: Users },
+  { href: "/admin/courses",            label: "Courses",            icon: BookOpen },
+  { href: "/admin/academic-structure", label: "Academic Structure", icon: Building2 },
+  { href: "/admin/announcements",      label: "Announcements",      icon: Bell },
 ];
 
-// General admin-only items
+// General admin-only items (not shown to department_admin)
 const adminOnlyNavItems = [
+  { href: "/admin/lecturers",   label: "Lecturers",    icon: Users },
   { href: "/admin/graduation-ai", label: "Graduation AI", icon: GraduationCap },
-  { href: "/admin/settings",      label: "Settings",            icon: Settings },
+  { href: "/admin/settings",    label: "Settings",     icon: Settings },
 ];
 
 export function Sidebar({ courseCount }: { courseCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAdmin, isGeneralAdmin, isDepartmentAdmin, profile, isLoading } = useUser();
+  const {
+    isAdmin,
+    isGeneralAdmin,
+    isDepartmentAdmin,
+    isLecturer,
+    profile,
+    isLoading,
+  } = useUser();
+
+  // ── Final-year detection (Graduation Project visibility) ────────
+  // A student only sees "Graduation Project" once they're in their
+  // final year. Three cases, based on the academic structure schema:
+  //
+  //  1. specialization_id set → final year = that specialization's
+  //     total_duration_years.
+  //  2. academic_plan_id set but specialization_id NULL → the student
+  //     is on the structured path but hasn't branched yet. This is
+  //     final year ONLY if the plan has zero specializations at all
+  //     (an unbranched programme, e.g. Civil Engineering — shared_years
+  //     IS the total length). If the plan DOES have specializations,
+  //     the student is still in the shared trunk and can never be in
+  //     their final year without a specialization_id (enforced by a
+  //     DB trigger), so we correctly report false.
+  //  3. Neither set (pure legacy student) → fall back to
+  //     getMaxYearsForProgram() from the static department/program
+  //     config.
+  const [isFinalYear, setIsFinalYear] = useState(false);
+
+  useEffect(() => {
+    if (!profile) {
+      setIsFinalYear(false);
+      return;
+    }
+    // Captured once, right after the null-check, into a fresh const.
+    // Its inferred type is UserProfile (non-null) permanently — unlike
+    // the outer `profile` binding, this narrowing survives being read
+    // from inside the nested async function/closures below.
+    const currentProfile = profile;
+
+    let cancelled = false;
+    const supabase = createClient();
+
+    async function resolveFinalYear() {
+      if (currentProfile.specialization_id) {
+        const { data } = await supabase
+          .from("specializations")
+          .select("total_duration_years")
+          .eq("id", currentProfile.specialization_id)
+          .single();
+        if (cancelled) return;
+        const maxYears = data?.total_duration_years;
+        setIsFinalYear(
+          typeof maxYears === "number" && currentProfile.year_of_study >= maxYears
+        );
+        return;
+      }
+
+      if (currentProfile.academic_plan_id) {
+        const [{ data: plan }, { count }] = await Promise.all([
+          supabase
+            .from("academic_plans")
+            .select("shared_years")
+            .eq("id", currentProfile.academic_plan_id)
+            .single(),
+          supabase
+            .from("specializations")
+            .select("id", { count: "exact", head: true })
+            .eq("academic_plan_id", currentProfile.academic_plan_id),
+        ]);
+        if (cancelled) return;
+
+        const hasSpecializations = (count ?? 0) > 0;
+        if (hasSpecializations) {
+          // Still in the shared trunk with no track chosen yet —
+          // can never be final year in this state.
+          setIsFinalYear(false);
+        } else {
+          const sharedYears = plan?.shared_years;
+          setIsFinalYear(
+            typeof sharedYears === "number" && currentProfile.year_of_study >= sharedYears
+          );
+        }
+        return;
+      }
+
+      // Pure legacy student — no structured-path IDs at all.
+      const maxYears = getMaxYearsForProgram(currentProfile.department, currentProfile.program);
+      setIsFinalYear(currentProfile.year_of_study >= maxYears);
+    }
+
+    resolveFinalYear();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile]);
+
+  const visibleStudentNavItems = studentNavItems.filter(
+    (item) => item.href !== "/graduation-project" || isFinalYear
+  );
 
   // Build nav items for department admins: keep "Courses" pointing to
-  // /admin/courses exactly like general admin (they can browse there,
-  // and the "+ Add Course" button on that page already redirects into
-  // their department correctly). "Academic Structure" itself gets
-  // pointed straight at their own department instead of the cross-
-  // department index.
-  const effectiveAdminNavItems = isDepartmentAdmin && profile?.managed_department_id
-    ? adminNavItems.map((item) =>
-        item.href === "/admin/academic-structure"
-          ? { href: `/admin/academic-structure/${profile.managed_department_id}`, label: "My Department", icon: Building2 }
-          : item
-      )
-    : adminNavItems;
+  // /admin/courses exactly like general admin; "Academic Structure" points
+  // straight at their own department.
+  const effectiveAdminNavItems = (() => {
+    const managedDepartmentId = profile?.managed_department_id;
+    if (!isDepartmentAdmin || !managedDepartmentId) return adminNavItems;
+    // Narrowed to a plain `string` at declaration — safe to read from
+    // inside the .map() callback below (see the same fix applied above
+    // for `currentProfile`).
+    const deptId = managedDepartmentId;
+    return adminNavItems.map((item) =>
+      item.href === "/admin/academic-structure"
+        ? {
+            href: `/admin/academic-structure/${deptId}`,
+            label: "My Department",
+            icon: Building2,
+          }
+        : item
+    );
+  })();
 
-  // /admin/settings is general-admin-only (system-wide settings), so
-  // department admins get the general /settings page instead (Appearance,
-  // FAQ, account) — same page students use, no role restriction on it.
+  // Department admins get the general /settings page (not /admin/settings
+  // which is general-admin-only — system-wide settings).
   const settingsNavItem = isDepartmentAdmin
     ? { href: "/settings", label: "Settings", icon: Settings }
     : null;
@@ -135,8 +253,7 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
         {!isLoading && isAdmin ? (
-          // Admin account: show ONLY the admin section — no student menu,
-          // no duplicate "Dashboard" entries.
+          // ── Admin / Department Admin ──────────────────────────
           <div className="space-y-1">
             <div className="flex items-center gap-2 px-3 mb-2">
               <Shield className="w-3 h-3 text-amber-400" />
@@ -148,27 +265,39 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
               <NavItem
                 key={item.href}
                 {...item}
-                badge={item.href === "/admin/courses" && courseCount !== undefined ? courseCount : undefined}
+                badge={
+                  item.href === "/admin/courses" && courseCount !== undefined
+                    ? courseCount
+                    : undefined
+                }
               />
             ))}
-            {/* General admin-only navigation items */}
-            {isGeneralAdmin && adminOnlyNavItems.map((item) => (
-              <NavItem
-                key={item.href}
-                {...item}
-              />
-            ))}
+            {/* General admin-only items (Lecturers, Graduation AI, Settings) */}
+            {isGeneralAdmin &&
+              adminOnlyNavItems.map((item) => (
+                <NavItem key={item.href} {...item} />
+              ))}
             {/* Department admin: general /settings (not /admin/settings) */}
             {settingsNavItem && <NavItem {...settingsNavItem} />}
           </div>
+        ) : !isLoading && isLecturer ? (
+          // ── Lecturer ──────────────────────────────────────────
+          <div className="space-y-1">
+            <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+              Menu
+            </p>
+            {lecturerNavItems.map((item) => (
+              <NavItem key={item.href} {...item} />
+            ))}
+          </div>
         ) : (
-          // Student account: show only the student menu.
+          // ── Student ───────────────────────────────────────────
           !isLoading && (
             <div className="space-y-1">
               <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
                 Menu
               </p>
-              {studentNavItems.map((item) => (
+              {visibleStudentNavItems.map((item) => (
                 <NavItem key={item.href} {...item} />
               ))}
             </div>
