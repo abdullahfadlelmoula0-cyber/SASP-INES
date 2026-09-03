@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { createNotification } from "@/lib/notifications/actions";
+import { logActivity } from "@/lib/activity-log/actions";
 import { generateAiTopics } from "@/lib/graduation/topic-ai";
 import { analyzeSimilarity } from "@/lib/graduation/similarity-ai";
 import {
@@ -1441,6 +1442,14 @@ export async function acceptRequest(projectId: string): Promise<{ error?: string
       topic_title_snapshot: project.topic_title ?? null,
     });
 
+    await logActivity({
+      userId: profile.id,
+      role: profile.role,
+      action: "ACCEPT_SUPERVISION_REQUEST",
+      description: `Accepted supervision request: "${project.topic_title ?? "untitled project"}"`,
+      metadata: { projectId, studentId: project.student_id },
+    });
+
     // Notify the student
     await createNotification({
       recipientId: project.student_id,
@@ -1522,6 +1531,14 @@ export async function rejectRequest(
       comments: comments.trim(),
       topic_title_snapshot: project.topic_title ?? null,
       topic_description_snapshot: project.topic_description ?? null,
+    });
+
+    await logActivity({
+      userId: profile.id,
+      role: profile.role,
+      action: "REJECT_SUPERVISION_REQUEST",
+      description: `Declined supervision request: "${project.topic_title ?? "untitled project"}"`,
+      metadata: { projectId, studentId: project.student_id, poolExhausted },
     });
 
     // Notify the student

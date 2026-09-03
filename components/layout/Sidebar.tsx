@@ -17,9 +17,11 @@ import {
   Users,
   Building2,
   ClipboardList,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { logAuthEvent } from "@/lib/activity-log/actions";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { getMaxYearsForProgram } from "@/lib/academic-config";
@@ -54,6 +56,7 @@ const adminNavItems = [
 const adminOnlyNavItems = [
   { href: "/admin/lecturers",   label: "Lecturers",    icon: Users },
   { href: "/admin/graduation-ai", label: "Graduation AI", icon: GraduationCap },
+  { href: "/admin/activity-logs", label: "Activity Logs", icon: History },
   { href: "/admin/settings",    label: "Settings",     icon: Settings },
 ];
 
@@ -189,6 +192,12 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
 
   async function handleSignOut() {
     const supabase = createClient();
+    // Log the sign-out event BEFORE the actual signOut() call, using
+    // `profile` already loaded from useUser() — no extra fetch needed.
+    // Non-student roles only, enforced inside logAuthEvent itself.
+    if (profile) {
+      await logAuthEvent({ userId: profile.id, role: profile.role, event: "LOGOUT" });
+    }
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();

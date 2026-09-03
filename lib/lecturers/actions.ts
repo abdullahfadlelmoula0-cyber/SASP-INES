@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { logActivity } from "@/lib/activity-log/actions";
 import {
   lecturerSchema,
   parseExpertiseAreas,
@@ -70,7 +71,7 @@ export async function createLecturer(data: LecturerFormData): Promise<{
   error?: string;
 }> {
   try {
-    await requireAdmin();
+    const actor = await requireAdmin();
 
     const parsed = lecturerSchema.safeParse(data);
     if (!parsed.success) {
@@ -115,6 +116,14 @@ export async function createLecturer(data: LecturerFormData): Promise<{
 
     if (profileError) return { error: profileError.message };
 
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "CREATE_LECTURER",
+      description: `Created lecturer account: ${parsed.data.full_name}`,
+      metadata: { lecturerId: authData.user.id, email: parsed.data.email },
+    });
+
     revalidatePath("/admin/lecturers");
     return { success: true };
   } catch (err: any) {
@@ -131,7 +140,7 @@ export async function updateLecturer(
   data: LecturerFormData
 ): Promise<{ success?: boolean; error?: string }> {
   try {
-    await requireAdmin();
+    const actor = await requireAdmin();
 
     const parsed = lecturerSchema.safeParse(data);
     if (!parsed.success) {
@@ -155,6 +164,14 @@ export async function updateLecturer(
 
     if (error) return { error: error.message };
 
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "UPDATE_LECTURER",
+      description: `Updated lecturer profile: ${parsed.data.full_name}`,
+      metadata: { lecturerId: id },
+    });
+
     revalidatePath("/admin/lecturers");
     return { success: true };
   } catch (err: any) {
@@ -171,7 +188,7 @@ export async function deleteLecturer(
   id: string
 ): Promise<{ success?: boolean; error?: string }> {
   try {
-    await requireAdmin();
+    const actor = await requireAdmin();
     const supabase = await createClient();
 
     // Guard: a lecturer who has submitted graduation project reviews can't
@@ -191,6 +208,15 @@ export async function deleteLecturer(
       };
     }
 
+    // Fetch the name before deleting so the audit log entry is readable
+    // (the row won't exist anymore once we delete it below).
+    const { data: lecturerRow } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", id)
+      .single();
+    const lecturerName = lecturerRow?.full_name ?? null;
+
     const { error } = await supabase
       .from("profiles")
       .delete()
@@ -198,6 +224,14 @@ export async function deleteLecturer(
       .eq("role", "lecturer");
 
     if (error) return { error: error.message };
+
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "DELETE_LECTURER",
+      description: `Deleted lecturer account: ${lecturerName ?? id}`,
+      metadata: { lecturerId: id },
+    });
 
     revalidatePath("/admin/lecturers");
     return { success: true };

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
+import { logActivity } from "@/lib/activity-log/actions";
 import {
   createAnnouncementSchema,
   updateAnnouncementSchema,
@@ -172,6 +173,15 @@ export async function createAnnouncement(
 
     if (error) throw error;
 
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "CREATE_ANNOUNCEMENT",
+      description: `Created announcement: "${validated.title}"`,
+      departmentId: actor.role === "department_admin" ? (actor.managed_department_id ?? null) : null,
+      metadata: { announcementId: data.id, priority: validated.priority },
+    });
+
     revalidatePath("/admin/announcements");
     revalidatePath("/announcements");
 
@@ -237,6 +247,15 @@ export async function updateAnnouncement(
 
     if (error) throw error;
 
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "UPDATE_ANNOUNCEMENT",
+      description: `Updated announcement: "${data.title}"`,
+      departmentId: actor.role === "department_admin" ? (actor.managed_department_id ?? null) : null,
+      metadata: { announcementId: validated.id },
+    });
+
     revalidatePath("/admin/announcements");
     revalidatePath("/announcements");
 
@@ -260,12 +279,19 @@ export async function deleteAnnouncement(
   error?: string;
 }> {
   try {
-    await requireAdminOrDepartmentAdmin();
+    const actor = await requireAdminOrDepartmentAdmin();
 
     // Validate input
     const validated = deleteAnnouncementSchema.parse(input);
     
     const supabase = await createClient();
+
+    // Fetch the title before deleting so the audit log entry is readable.
+    const { data: announcementRow } = await supabase
+      .from("announcements")
+      .select("title")
+      .eq("id", validated.id)
+      .single();
 
     const { error } = await supabase
       .from("announcements")
@@ -273,6 +299,15 @@ export async function deleteAnnouncement(
       .eq("id", validated.id);
 
     if (error) throw error;
+
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "DELETE_ANNOUNCEMENT",
+      description: `Deleted announcement: "${announcementRow?.title ?? validated.id}"`,
+      departmentId: actor.role === "department_admin" ? (actor.managed_department_id ?? null) : null,
+      metadata: { announcementId: validated.id },
+    });
 
     revalidatePath("/admin/announcements");
     revalidatePath("/announcements");

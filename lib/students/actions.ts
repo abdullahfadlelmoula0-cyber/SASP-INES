@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
+import { logActivity } from "@/lib/activity-log/actions";
 import { studentSchema, type StudentFormData } from "./schemas";
 
 // Resolves academic_plan_id + specialization_id into human-readable
@@ -119,6 +120,15 @@ export async function createStudent(data: StudentFormData) {
 
     if (profileError) return { error: profileError.message };
 
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "CREATE_STUDENT",
+      description: `Created student account: ${parsed.data.full_name}`,
+      departmentId: actorDepartmentId,
+      metadata: { studentId: authData.user.id, email: parsed.data.email },
+    });
+
     revalidatePath("/admin/students");
     return { success: true, data: student };
   } catch (err: any) {
@@ -193,6 +203,15 @@ export async function updateStudent(id: string, data: StudentFormData) {
 
     if (error) return { error: error.message };
 
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "UPDATE_STUDENT",
+      description: `Updated student profile: ${parsed.data.full_name}`,
+      departmentId: actorDepartmentId,
+      metadata: { studentId: id },
+    });
+
     revalidatePath("/admin/students");
     return { success: true, data: student };
   } catch (err: any) {
@@ -206,6 +225,15 @@ export async function deleteStudent(id: string) {
     const actorDepartmentId = actor.role === "admin" ? null : (actor.managed_department_id ?? null);
 
     const supabase = await createClient();
+
+    // Fetch the name before deleting so the audit log entry is readable
+    // (the row won't exist anymore once we delete it below).
+    const { data: studentRow } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", id)
+      .single();
+    const studentName = studentRow?.full_name ?? null;
 
     // Department admin can only delete students in their own department
     if (actorDepartmentId) {
@@ -222,6 +250,15 @@ export async function deleteStudent(id: string) {
 
     const { error } = await supabase.from("profiles").delete().eq("id", id);
     if (error) return { error: error.message };
+
+    await logActivity({
+      userId: actor.id,
+      role: actor.role,
+      action: "DELETE_STUDENT",
+      description: `Deleted student account: ${studentName ?? id}`,
+      departmentId: actorDepartmentId,
+      metadata: { studentId: id },
+    });
 
     revalidatePath("/admin/students");
     return { success: true };

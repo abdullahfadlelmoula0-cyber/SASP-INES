@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SaspInesLogo } from "@/components/shared/SaspInesLogo";
 import { createClient } from "@/lib/supabase/client";
+import { logAuthEvent } from "@/lib/activity-log/actions";
 import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 // Maps server-side error codes (passed as ?error=xxx) to user-friendly messages.
@@ -120,6 +121,12 @@ export function LoginForm() {
       setIsLoading(false);
       return;
     }
+
+    // Log the sign-in event (non-student roles only, enforced inside
+    // logAuthEvent itself) before redirecting, so the record is
+    // guaranteed to be attempted even if the user navigates away
+    // immediately after.
+    await logAuthEvent({ userId: user.id, role: profile.role, event: "LOGIN" });
 
     // Role-based redirect: admins → /admin, students → /dashboard.
     if (profile.role === "admin") {

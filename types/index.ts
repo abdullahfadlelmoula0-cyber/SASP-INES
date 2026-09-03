@@ -464,6 +464,61 @@ export interface Announcement extends Partial<AcademicTarget> {
   announcement_attachments?: AnnouncementAttachment[];
 }
 
+// ── Activity Log ─────────────────────────────────────────
+
+/**
+ * Every action the audit log can record. Deliberately a TypeScript
+ * string union (NOT a Postgres enum) — the `action` column in
+ * `public.activity_logs` is plain `text`, so adding a new action here
+ * is a type-only change, never a migration.
+ *
+ * Only admin / department_admin / lecturer actions are logged.
+ * Students are never included.
+ */
+export type ActivityAction =
+  | "LOGIN"
+  | "LOGOUT"
+  | "ACCEPT_SUPERVISION_REQUEST"
+  | "REJECT_SUPERVISION_REQUEST"
+  | "CREATE_LECTURER"
+  | "UPDATE_LECTURER"
+  | "DELETE_LECTURER"
+  | "CREATE_STUDENT"
+  | "UPDATE_STUDENT"
+  | "DELETE_STUDENT"
+  | "CREATE_COURSE"
+  | "UPDATE_COURSE"
+  | "DELETE_COURSE"
+  | "CREATE_ANNOUNCEMENT"
+  | "UPDATE_ANNOUNCEMENT"
+  | "DELETE_ANNOUNCEMENT"
+  | "UPDATE_USER";
+
+/**
+ * Mirrors the `public.activity_logs` table (created in migration
+ * 019_activity_logs.sql). `role` is a snapshot taken at the moment of
+ * the event — if a user's role changes later, past log rows keep
+ * reflecting what their role WAS when the action happened.
+ *
+ * Written exclusively by lib/activity-log/actions.ts -> logActivity()
+ * via the service-role client. No client-side or RLS-based INSERT path
+ * exists for this table, by design.
+ */
+export interface ActivityLog {
+  id: string;
+  user_id: string | null;
+  role: UserRole;
+  action: ActivityAction;
+  description: string | null;
+  department_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  /** Joined actor profile (optional, when selected in query). */
+  user?: Pick<UserProfile, "full_name" | "university_email"> | null;
+  /** Joined department name (optional, when selected in query). */
+  department?: { name: string } | null;
+}
+
 // ── Pagination ───────────────────────────────────────────────────
 
 export interface PaginatedResponse<T> {

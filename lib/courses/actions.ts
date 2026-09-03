@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireAdminOrDepartmentAdmin } from "@/lib/auth/requireAdminOrDepartmentAdmin";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity-log/actions";
 
 // Zod schema for course input
 export const courseSchema = z.object({
@@ -96,6 +97,14 @@ export async function createCourse(data: CourseFormData) {
     return { error: "Failed to create course. Please try again." };
   }
 
+  await logActivity({
+    userId: actor.id,
+    role: actor.role,
+    action: "CREATE_COURSE",
+    description: `Created course: ${parsed.data.code} — ${parsed.data.title}`,
+    departmentId: actor.role === "department_admin" ? (actor.managed_department_id ?? null) : null,
+  });
+
   revalidatePath("/admin/courses");
   revalidatePath("/admin");
   return { success: true };
@@ -134,6 +143,15 @@ export async function updateCourse(id: string, data: CourseFormData) {
     return { error: "Failed to update course. Please try again." };
   }
 
+  await logActivity({
+    userId: actor.id,
+    role: actor.role,
+    action: "UPDATE_COURSE",
+    description: `Updated course: ${parsed.data.code} — ${parsed.data.title}`,
+    departmentId: actor.role === "department_admin" ? (actor.managed_department_id ?? null) : null,
+    metadata: { courseId: id },
+  });
+
   revalidatePath("/admin/courses");
   revalidatePath("/admin");
   return { success: true };
@@ -143,12 +161,30 @@ export async function deleteCourse(id: string) {
   const actor = await requireAdminOrDepartmentAdmin();
   const supabase = await createClient();
 
+  // Fetch code/title before deleting so the audit log entry is readable.
+  const { data: courseRow } = await supabase
+    .from("courses")
+    .select("code, title")
+    .eq("id", id)
+    .single();
+
   const { error } = await supabase.from("courses").delete().eq("id", id);
 
   if (error) {
     console.error("Supabase delete error:", error);
     return { error: "Failed to delete course." };
   }
+
+  await logActivity({
+    userId: actor.id,
+    role: actor.role,
+    action: "DELETE_COURSE",
+    description: courseRow
+      ? `Deleted course: ${courseRow.code} — ${courseRow.title}`
+      : `Deleted course: ${id}`,
+    departmentId: actor.role === "department_admin" ? (actor.managed_department_id ?? null) : null,
+    metadata: { courseId: id },
+  });
 
   revalidatePath("/admin/courses");
   revalidatePath("/admin");
