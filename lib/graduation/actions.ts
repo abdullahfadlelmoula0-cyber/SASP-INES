@@ -1393,6 +1393,39 @@ export async function getLecturerRequests(): Promise<{
 }
 
 /**
+ * Fetches one graduation project scoped strictly to the CURRENT
+ * lecturer being its assigned supervisor (used by the read-only
+ * chapter-review pages under /supervision-requests/[projectId]/chapters).
+ * Returns an explicit error rather than relying solely on RLS silently
+ * returning nothing, so the UI can show a clear "not your project"
+ * message instead of a confusing empty state.
+ */
+export async function getProjectForSupervisorView(projectId: string): Promise<{
+  data?: GraduationProject;
+  error?: string;
+}> {
+  try {
+    const profile = await requireAuth();
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("graduation_projects")
+      .select(`*, student:student_id(id, full_name, university_email)`)
+      .eq("id", projectId)
+      .eq("supervisor_id", profile.id)
+      .single();
+
+    if (error || !data) {
+      return { error: "Project not found or you are not the assigned supervisor." };
+    }
+
+    return { data: data as GraduationProject };
+  } catch (err: any) {
+    return { error: err.message || "Failed to load project." };
+  }
+}
+
+/**
  * Lecturer accepts a supervision request → status = 'active'.
  * Notifies the student.
  */

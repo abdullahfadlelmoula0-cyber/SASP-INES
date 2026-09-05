@@ -527,3 +527,121 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
 }
+
+// ── Dissertation Chapters ─────────────────────────────────────────
+
+/**
+ * A fixed identifier for one chapter slot within a graduation project.
+ * Kept as a plain string union (not a DB enum) so the catalog can be
+ * extended later without a migration — see CHAPTER_CATALOG in
+ * lib/chapters/actions.ts for the ordered list + display titles.
+ */
+export type ChapterKey =
+  | "general_introduction"
+  | "literature_review"
+  | "methodology"
+  | "results"
+  | "discussion"
+  | "conclusion";
+
+/**
+ * Mirrors the `public.dissertation_chapters` table — the CURRENT live
+ * state of one chapter slot for one graduation project. Either
+ * `content` (written in-system) or `file_url` (uploaded Word/PDF) is
+ * set, never expected to be both at once by the UI (the DB doesn't
+ * enforce this — the writing/upload toggle in the UI does).
+ */
+export interface DissertationChapter {
+  id: string;
+  project_id: string;
+  chapter_key: ChapterKey | string;
+  title: string | null;
+  content: string | null;
+  file_url: string | null;
+  current_version_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Mirrors the `public.chapter_versions` table — one immutable snapshot
+ * per save-as-version action. Nothing is ever overwritten; restoring an
+ * old version creates a NEW version copying it forward (see
+ * restoreChapterVersion in lib/chapters/actions.ts).
+ */
+export interface ChapterVersion {
+  id: string;
+  chapter_id: string;
+  version_number: number;
+  content_snapshot: string | null;
+  file_url_snapshot: string | null;
+  edited_by: string | null;
+  created_at: string;
+  /** Joined editor profile (optional, when selected in query). */
+  editor?: Pick<UserProfile, "id" | "full_name"> | null;
+  /** Joined compliance report for this exact version, if the AI check
+   *  has run on it (Phase 4 — may be absent until that phase ships). */
+  compliance_report?: ChapterComplianceReport | null;
+}
+
+/**
+ * Mirrors the `public.chapter_compliance_reports` table (Phase 4 — the
+ * AI compliance engine). `findings` holds ONE entry per AI-checkable
+ * rule that was actually sent to Gemini (structure/citation/language/
+ * content only — NEVER formatting, which cannot be judged from plain
+ * text and is shown separately as a static checklist in the UI).
+ *
+ * `status` is computed deterministically by the engine from the
+ * findings' pass/fail + severity — never asserted directly by Gemini
+ * (same authority split as SimilarProjectMatch.similarity_score).
+ */
+export interface ChapterComplianceReport {
+  id: string;
+  chapter_version_id: string;
+  status: "compliant" | "needs_review" | "non_compliant";
+  findings: ChapterComplianceFinding[];
+  created_at: string;
+}
+
+/**
+ * One AI-checked rule's outcome. Always present for every AI-checkable
+ * rule that applied to this chapter at check time — not just failures
+ * — so the UI can show a complete pass/fail list, not only problems.
+ */
+export interface ChapterComplianceFinding {
+  rule_category: Exclude<GuidelineRuleCategory, "formatting">;
+  rule_text: string;
+  passed: boolean;
+  /** Only meaningful when passed = false; "low" when passed = true. */
+  severity: "low" | "medium" | "high";
+  explanation: string;
+}
+
+// ── INES Guideline Rules (Step 3 — knowledge base for the future AI
+// compliance engine, Phase 4) ───────────────────────────────────────────────
+
+export type GuidelineRuleCategory =
+  | "formatting"
+  | "structure"
+  | "citation"
+  | "language"
+  | "content";
+
+/**
+ * Mirrors the `public.ines_guideline_rules` table. Deliberately
+ * versioned (guideline_version) rather than ever edited/deleted in
+ * place — when INES issues an updated guideline document, the old
+ * version's rows get `is_active = false` and the new version's rows
+ * are inserted alongside them, so nothing else in the system needs to
+ * change (see the Step-3 implementation plan).
+ */
+export interface IneseGuidelineRule {
+  id: string;
+  guideline_version: string;
+  /** Null = applies to the whole document, not one specific chapter. */
+  applies_to_chapter: ChapterKey | string | null;
+  rule_text: string;
+  category: GuidelineRuleCategory;
+  is_active: boolean;
+  created_at: string;
+}

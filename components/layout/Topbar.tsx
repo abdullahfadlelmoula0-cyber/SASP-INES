@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MobileSidebarDrawer } from "@/components/layout/MobileSidebarDrawer";
 import { cn } from "@/lib/utils";
 
 /** Lightweight relative-time formatter — no external dep required. */
@@ -34,7 +35,7 @@ function timeAgo(dateStr: string): string {
   return rtf.format(-Math.floor(months / 12), "year");
 }
 
-export function Topbar() {
+export function Topbar({ courseCount }: { courseCount?: number }) {
   const { profile, isLoading, user } = useUser();
   const router = useRouter();
 
@@ -114,11 +115,14 @@ export function Topbar() {
 
   return (
     <header className="flex items-center justify-between h-16 px-4 md:px-6 border-b border-border bg-card/80 backdrop-blur-sm shrink-0 z-10">
-      <div className="flex items-center gap-2 md:hidden">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-          <GraduationCap className="w-4 h-4 text-primary-foreground" />
+      <div className="flex items-center gap-1 md:hidden">
+        <MobileSidebarDrawer courseCount={courseCount} />
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <GraduationCap className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-sm text-foreground">SASP-INES</span>
         </div>
-        <span className="font-bold text-sm text-foreground">SASP-INES</span>
       </div>
 
       <div className="hidden md:block" />

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useEffect, useTransition } from "react";
+import Link from "next/link";
 import {
   BookOpen,
   CheckCircle2,
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   Gauge,
   Pencil,
+  FileStack,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -646,6 +648,13 @@ function ActiveCard({ project }: { project: GraduationProject }) {
             </p>
           )}
         </div>
+
+        <Link href={`/supervision-requests/${project.id}/chapters`}>
+          <Button variant="outline" size="sm" className="w-full gap-1.5">
+            <FileStack className="w-3.5 h-3.5" />
+            View Chapters
+          </Button>
+        </Link>
       </div>
     </div>
   );

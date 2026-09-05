@@ -56,11 +56,24 @@ const adminNavItems = [
 const adminOnlyNavItems = [
   { href: "/admin/lecturers",   label: "Lecturers",    icon: Users },
   { href: "/admin/graduation-ai", label: "Graduation AI", icon: GraduationCap },
+  { href: "/admin/guidelines", label: "Dissertation Guidelines", icon: FileText },
   { href: "/admin/activity-logs", label: "Activity Logs", icon: History },
   { href: "/admin/settings",    label: "Settings",     icon: Settings },
 ];
 
-export function Sidebar({ courseCount }: { courseCount?: number }) {
+export function Sidebar({
+  courseCount,
+  variant = "desktop",
+  onNavigate,
+}: {
+  courseCount?: number;
+  /** "desktop": the permanent md+ sidebar (hidden below md).
+   *  "drawer": rendered inside the mobile hamburger drawer — always
+   *  visible (the drawer itself handles the md:hidden trigger), and
+   *  calls onNavigate() after each link click so the drawer can close. */
+  variant?: "desktop" | "drawer";
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const {
@@ -198,6 +211,7 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
     if (profile) {
       await logAuthEvent({ userId: profile.id, role: profile.role, event: "LOGOUT" });
     }
+    onNavigate?.();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
@@ -218,6 +232,7 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
     return (
       <Link
         href={href}
+        onClick={onNavigate}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
           isActive
@@ -245,7 +260,14 @@ export function Sidebar({ courseCount }: { courseCount?: number }) {
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-64 shrink-0 sidebar-gradient border-r border-sidebar-border">
+    <aside
+      className={cn(
+        "flex flex-col shrink-0 sidebar-gradient",
+        variant === "desktop"
+          ? "hidden md:flex w-64 border-r border-sidebar-border"
+          : "w-full h-full"
+      )}
+    >
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-sidebar-border">
         <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">

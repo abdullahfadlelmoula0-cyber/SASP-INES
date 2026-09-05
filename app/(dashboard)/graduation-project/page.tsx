@@ -1743,6 +1743,23 @@ export default function GraduationProjectPage() {
             </p>
           </div>
         </div>
+
+        <a href="/graduation-project/chapters" className="block">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-primary/30 hover:shadow-md transition-all flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <BookOpen className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-foreground">Write Your Chapters</p>
+                <p className="text-xs text-muted-foreground">
+                  Write or upload each chapter, with full version history.
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          </div>
+        </a>
       </div>
     );
   }
